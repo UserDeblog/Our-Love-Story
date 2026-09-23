@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Our Love Chronicle</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- ================= HEADER ================= -->
+
+<header class="header">
+
+    <div class="top-bar">
+        <span>MONDAY, SEPTEMBER 14, 2026</span>
+        <span>THE OFFICIAL NEWSPAPER OF OUR LOVE</span>
+    </div>
+
+    <div class="header-main">
+
+        <div class="logo">
+            <span class="logo-small">THE</span>
+            <h1>Our Love Chronicle</h1>
+            <span class="logo-subtitle">
+                Every moment deserves a story.
+            </span>
+        </div>
+
+        <div class="love-counter">
+            <span>TOGETHER FOR</span>
+            <strong id="loveCounter">0 DAYS</strong>
+        </div>
+
+    </div>
+
+    <nav class="navigation">
+
+        <button class="nav-btn active" data-page="home">
+            HOME
+        </button>
+
+        <button class="nav-btn" data-page="photos">
+            OUR PHOTOS
+        </button>
+
+        <button class="nav-btn" data-page="timeline">
+            TIMELINE
+        </button>
+
+        <button class="nav-btn" data-page="news">
+            DAILY NEWS
+        </button>
+
+    </nav>
+
+</header>
+
+
+<!-- ================= MAIN ================= -->
+
+<main>
+
+
+<!-- ================= HOME ================= -->
+
+<section id="home" class="page active-page">
+
+    <div class="breaking-news">
+        <span class="breaking-label">BREAKING LOVE NEWS</span>
+
+        <div class="breaking-text">
+            <span id="breakingNews">
+                Casal continua escrevendo a história mais bonita de todas.
+            </span>
+        </div>
+    </div>
+
+
+    <section class="hero">
+
+        <article class="main-story">
+
+            <div class="image-container">
+                <img src="images/foto1.jpg" alt="Nosso momento">
+                <span class="category">SPECIAL EDITION</span>
+            </div>
+
+            <div class="story-content">
+
+                <span class="date">
+                    SEPTEMBER 14, 2026
+                </span>
+
+                <h2>
+                    UMA HISTÓRIA QUE AINDA ESTÁ SENDO ESCRITA
+                </h2>
+
+                <p>
+                    Algumas histórias começam com um encontro.
+                    A nossa começou a se transformar em algo que
+                    merece ser lembrado para sempre.
+                </p>
+
+                <button class="read-more" onclick="openPage('timeline')">
+                    READ OUR STORY →
+                </button>
+
+            </div>
+
+        </article>
+
+
+        <aside class="side-stories">
+
+            <article class="small-story">
+
+                <img src="images/foto2.jpg" alt="Momento especial">
+
+                <div>
+                    <span class="category-text">
+                        LOVE
+                    </span>
+
+                    <h3>
+                        Mais um momento que virou memória.
+                    </h3>
+
+                    <p>
+                        Porque até os dias comuns ficam especiais
+                        quando estamos juntos.
+                    </p>
+                </div>
+
+            </article>
+
+
+            <article class="small-story">
+
+                <img src="images/foto3.jpg" alt="Momento juntos">
+
+                <div>
+                    <span class="category-text">
+                        EXCLUSIVE
+                    </span>
+
+                    <h3>
+                        Fontes confirmam: o amor continua crescendo.
+                    </h3>
+
+                    <p>
+                        Segundo informações da nossa redação,
+                        os dois continuam inseparáveis.
+                    </p>
+
+                </div>
+
+            </article>
+
+        </aside>
+
+    </section>
+
+
+    <!-- MOMENTOS -->
+
+    <section class="section">
+
+        <div class="section-heading">
+
+            <div>
+                <span class="section-label">
+                    OUR ARCHIVE
+                </span>
+
+                <h2>
+                    Latest Moments
+                </h2>
+            </div>
+
+            <button onclick="openPage('photos')">
+                VIEW ALL →
+            </button>
+
+        </div>
+
+
+        <div class="moment-grid">
+
+            <article class="moment-card">
+
+                <img src="images/foto4.jpg" alt="Momento">
+
+                <div class="moment-info">
+                    <span>MEMORY • 2026</span>
+
+                    <h3>
+                        Aquele dia que não queríamos que acabasse.
+                    </h3>
+
+                    <p>
+                        Um momento simples que acabou se tornando
+                        uma das nossas melhores lembranças.
+                    </p>
+                </div>
+
+            </article>
+
+
+            <article class="moment-card">
+
+                <img src="images/foto5.jpg" alt="Momento">
+
+                <div class="moment-info">
+                    <span>LOVE • 2026</span>
+
+                    <h3>
+                        Mais uma página da nossa história.
+                    </h3>
+
+                    <p>
+                        Algumas memórias não precisam de grandes
+                        acontecimentos para serem especiais.
+                    </p>
+                </div>
+
+            </article>
+
+
+            <article class="moment-card">
+
+                <img src="images/foto6.jpg" alt="Momento">
+
+                <div class="moment-info">
+                    <span>US • 2026</span>
+
+                    <h3>
+                        Nós dois, simplesmente nós.
+                    </h3>
+
+                    <p>
+                        Porque estar juntos já é motivo suficiente
+                        para transformar qualquer dia.
+                    </p>
+                </div>
+
+            </article>
+
+        </div>
+
+    </section>
+
+
+    <!-- FRASE -->
+
+    <section class="quote-section">
+
+        <div class="quote-mark">“</div>
+
+        <blockquote>
+            O mundo tem bilhões de histórias,
+            mas eu escolheria viver a nossa
+            em todas elas.
+        </blockquote>
+
+        <span>
+            — OUR LOVE CHRONICLE
+        </span>
+
+    </section>
+
+
+    <!-- NEWS PREVIEW -->
+
+    <section class="section">
+
+        <div class="section-heading">
+
+            <div>
+                <span class="section-label">
+                    DAILY JOURNAL
+                </span>
+
+                <h2>
+                    Today's News
+                </h2>
+            </div>
+
+            <button onclick="openPage('news')">
+                ALL NEWS →
+            </button>
+
+        </div>
+
+
+        <div id="homeNews" class="news-list"></div>
+
+    </section>
+
+</section>
+
+
+
+<!-- ================= PHOTOS ================= -->
+
+<section id="photos" class="page">
+
+    <div class="page-header">
+
+        <span>OUR ARCHIVE</span>
+
+        <h2>
+            Our Photos
+        </h2>
+
+        <p>
+            Every picture tells a little part of our story.
+        </p>
+
+    </div>
+
+
+    <div class="photo-filters">
+
+        <button class="photo-filter active">
+            ALL
+        </button>
+
+        <button class="photo-filter">
+            US
+        </button>
+
+        <button class="photo-filter">
+            DATES
+        </button>
+
+        <button class="photo-filter">
+            SPECIAL DAYS
+        </button>
+
+    </div>
+
+
+    <div class="gallery">
+
+        <div class="gallery-item">
+            <img src="images/foto1.jpg" alt="Foto nossa"
+                 onclick="openImage(this)">
+        </div>
+
+        <div class="gallery-item">
+            <img src="images/foto2.jpg" alt="Foto nossa"
+                 onclick="openImage(this)">
+        </div>
+
+        <div class="gallery-item">
+            <img src="images/foto3.jpg" alt="Foto nossa"
+                 onclick="openImage(this)">
+        </div>
+
+        <div class="gallery-item">
+            <img src="images/foto4.jpg" alt="Foto nossa"
+                 onclick="openImage(this)">
+        </div>
+
+        <div class="gallery-item">
+            <img src="images/foto5.jpg" alt="Foto nossa"
+                 onclick="openImage(this)">
+        </div>
+
+        <div class="gallery-item">
+            <img src="images/foto6.jpg" alt="Foto nossa"
+                 onclick="openImage(this)">
+        </div>
+
+        <div class="gallery-item">
+            <img src="images/foto7.jpg" alt="Foto nossa"
+                 onclick="openImage(this)">
+        </div>
+
+        <div class="gallery-item">
+            <img src="images/foto8.jpg" alt="Foto nossa"
+                 onclick="openImage(this)">
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- ================= TIMELINE ================= -->
+
+<section id="timeline" class="page">
+
+    <div class="page-header">
+
+        <span>OUR HISTORY</span>
+
+        <h2>
+            The Timeline
+        </h2>
+
+        <p>
+            Every chapter brought us here.
+        </p>
+
+    </div>
+
+
+    <div class="timeline">
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-date">
+                2025
+            </div>
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-card">
+
+                <img src="images/foto1.jpg" alt="Começo">
+
+                <div>
+
+                    <span>
+                        CHAPTER 01
+                    </span>
+
+                    <h3>
+                        THE BEGINNING
+                    </h3>
+
+                    <p>
+                        Aqui começa uma das histórias mais importantes
+                        das nossas vidas.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-date">
+                2025
+            </div>
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-card">
+
+                <img src="images/foto2.jpg" alt="Primeiros momentos">
+
+                <div>
+
+                    <span>
+                        CHAPTER 02
+                    </span>
+
+                    <h3>
+                        GETTING CLOSER
+                    </h3>
+
+                    <p>
+                        Cada conversa, cada encontro e cada pequeno
+                        momento começou a construir nossa história.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-date">
+                2026
+            </div>
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-card">
+
+                <img src="images/foto3.jpg" alt="Nossa história">
+
+                <div>
+
+                    <span>
+                        CHAPTER 03
+                    </span>
+
+                    <h3>
+                        OUR STORY
+                    </h3>
+
+                    <p>
+                        O que começou como uma história se tornou
+                        parte da nossa vida.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-date">
+                TODAY
+            </div>
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-card future">
+
+                <div class="future-icon">
+                    ♥
+                </div>
+
+                <div>
+
+                    <span>
+                        CHAPTER 04
+                    </span>
+
+                    <h3>
+                        TO BE CONTINUED...
+                    </h3>
+
+                    <p>
+                        Essa história ainda está sendo escrita.
+                        E talvez essa seja a parte mais bonita.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+</section>
+
+
+
+<!-- ================= DAILY NEWS ================= -->
+
+<section id="news" class="page">
+
+    <div class="page-header">
+
+        <span>THE DAILY EDITION</span>
+
+        <h2>
+            Daily News
+        </h2>
+
+        <p>
+            Everything that happened in our little world.
+        </p>
+
+    </div>
+
+
+    <div class="add-news">
+
+        <h3>
+            📝 Add Today's News
+        </h3>
+
+        <input
+            type="text"
+            id="newsTitle"
+            placeholder="Título da notícia"
+        >
+
+        <textarea
+            id="newsDescription"
+            placeholder="O que aconteceu hoje?"
+        ></textarea>
+
+        <button onclick="addNews()">
+            PUBLISH NEWS
+        </button>
+
+    </div>
+
+
+    <div id="allNews" class="news-list large"></div>
+
+</section>
+
+</main>
+
+
+
+<!-- ================= IMAGE MODAL ================= -->
+
+<div id="imageModal" class="image-modal">
+
+    <button class="close-modal" onclick="closeImage()">
+        ×
+    </button>
+
+    <img id="modalImage" src="" alt="Imagem ampliada">
+
+</div>
+
+
+
+<!-- ================= FOOTER ================= -->
+
+<footer>
+
+    <div class="footer-logo">
+        OUR LOVE CHRONICLE
+    </div>
+
+    <p>
+        A newspaper about two people,
+        countless memories and one story.
+    </p>
+
+    <span>
+        EST. 2025 • MADE WITH LOVE ♥
+    </span>
+
+</footer>
+
+
+<script src="script.js"></script>
+
+</body>
+</html>
