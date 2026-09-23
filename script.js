@@ -357,17 +357,17 @@ document.addEventListener(
 
 const breakingNews = [
 
-    "Casal continua escrevendo a história mais bonita de todas.",
+    "Jesus continua escrevendo a história mais bonita de todas.",
 
-    "URGENTE: Gabi continua sendo considerada a pessoa mais importante desta redação.",
+    "URGENTE: A Gabi continua sendo considerada a pessoa mais importante na vida do Samuel.",
 
-    "EXCLUSIVO: fontes confirmam que o amor continua crescendo.",
+    "EXCLUSIVO: Jesus confirma que o amor continuara crescendo até ele voltar.",
 
-    "PLANTÃO: mais um dia ao lado da pessoa amada entra para o arquivo.",
+    "PLANTÃO: Diz Samuel: mais um dia ao lado da gabi é melhor coisa do mundo.",
 
-    "ÚLTIMA HORA: especialistas afirmam que estar juntos continua sendo a melhor parte do dia.",
+    "ÚLTIMA HORA: especialistas afirmam que quando estão juntos é a melhor parte do dia.",
 
-    "BREAKING: não há previsão para o fim dessa história."
+    "BREAKING: Eles ficarão juntos até o Fim dos tempos."
 
 ];
 
