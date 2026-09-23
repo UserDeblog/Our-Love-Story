@@ -5,11 +5,11 @@
 }
 
 :root {
-    --red: rgb(192, 3, 3);
+    --red: rgb(235, 157, 170);
     --dark: #111111;
     --gray: #666;
     --light-gray: #eeeeee;
-    --background: #f8f8f6;
+    --background: #ede2ee;
     --white: #ffffff;
 }
 
