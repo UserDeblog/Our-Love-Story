@@ -37,6 +37,75 @@ updateLoveCounter();
 
 
 /* =========================================
+   CARROSSEL DE LEMBRANÇAS DA CAPA
+========================================= */
+
+const memories = [
+    {
+        image: "images/foto31.jpeg",
+        title: "UM DOS DIAS QUE PASSAMOS MAIS TEMPO JUNTOS",
+        comment: "Dizem que alguns minutos mudam tudo, e mudam mesmo. A nossa realidade se transforma em momentos quando passamos tempo de qualidade juntos."
+    },
+    {
+        image: "images/foto8.jpeg",
+        title: "VIMOS O PÔR DO SOL JUNTOS",
+        comment: "Foi um dia incrível. Vimos o pôr do sol juntos e foi lindo. Até os dias comuns ficam especiais quando estamos juntos."
+    },
+    {
+        image: "images/foto9.jpeg",
+        title: "UMA NOITE QUE VIROU HISTÓRIA",
+        comment: "Passamos a noite juntos e, na volta, inventamos nossas próprias brincadeiras. São esses detalhes que deixam a lembrança só nossa."
+    },
+    {
+        image: "images/foto11.jpeg",
+        title: "A GENTE NÃO QUERIA QUE O DIA ACABASSE",
+        comment: "Um momento simples que acabou se tornando uma das nossas melhores lembranças."
+    },
+    {
+        image: "images/foto23.jpeg",
+        title: "MOMENTOS SIMPLES, MAS ESPECIAIS",
+        comment: "Algumas memórias não precisam de grandes acontecimentos. Estar junto já faz qualquer momento valer a pena."
+    },
+    {
+        image: "images/foto47.jpg",
+        title: "NÓS DOIS, SIMPLESMENTE NÓS",
+        comment: "Estarmos juntos já é motivo suficiente para transformar qualquer dia em uma lembrança especial."
+    }
+];
+
+let memoryIndex = 0;
+
+function showMemory(index) {
+    memoryIndex = (index + memories.length) % memories.length;
+    const memory = memories[memoryIndex];
+
+    document.getElementById("memoryImage").src = memory.image;
+    document.getElementById("memoryImage").alt = memory.title;
+    document.getElementById("memoryTitle").textContent = memory.title;
+    document.getElementById("memoryComment").textContent = memory.comment;
+    document.getElementById("memoryDate").textContent = `LEMBRANÇA ${memoryIndex + 1} DE ${memories.length}`;
+
+    document.querySelectorAll(".memory-dot").forEach((dot, dotIndex) => {
+        dot.classList.toggle("active", dotIndex === memoryIndex);
+        dot.setAttribute("aria-current", dotIndex === memoryIndex ? "true" : "false");
+    });
+}
+
+const memoryDots = document.getElementById("memoryDots");
+memories.forEach((memory, index) => {
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.className = "memory-dot";
+    dot.setAttribute("aria-label", `Mostrar lembrança ${index + 1}: ${memory.title.toLowerCase()}`);
+    dot.addEventListener("click", () => showMemory(index));
+    memoryDots.appendChild(dot);
+});
+
+showMemory(0);
+window.setInterval(() => showMemory(memoryIndex + 1), 7000);
+
+
+/* =========================================
    NAVEGAÇÃO
 ========================================= */
 
