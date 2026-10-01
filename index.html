@@ -90,6 +90,7 @@
 
             <div class="image-container">
                 <img id="memoryImage" src="images/foto30.jpeg" alt="Nosso momento">
+                <video id="memoryVideo" muted playsinline loop hidden></video>
                 <span class="category">Lembranças</span>
                 <button class="memory-arrow memory-previous" type="button" aria-label="Foto anterior" onclick="showMemory(memoryIndex - 1)">‹</button>
                 <button class="memory-arrow memory-next" type="button" aria-label="Próxima foto" onclick="showMemory(memoryIndex + 1)">›</button>
@@ -327,20 +328,24 @@
 
     <div class="photo-filters">
 
-        <button class="photo-filter active">
+        <button class="photo-filter active" type="button" data-filter="all">
             ALL
         </button>
 
-        <button class="photo-filter">
+        <button class="photo-filter" type="button" data-filter="us">
             US
         </button>
 
-        <button class="photo-filter">
+        <button class="photo-filter" type="button" data-filter="dates">
             DATES
         </button>
 
-        <button class="photo-filter">
+        <button class="photo-filter" type="button" data-filter="special-days">
             SPECIAL DAYS
+        </button>
+
+        <button class="photo-filter" type="button" data-filter="videos">
+            VIDEOS
         </button>
 
     </div>
@@ -605,6 +610,8 @@
 
     </div>
 
+    <nav id="galleryPagination" class="gallery-pagination" aria-label="Paginação da galeria"></nav>
+
 </section>
 
 
@@ -817,6 +824,22 @@
             PUBLISH NEWS
         </button>
 
+        <div class="upload-divider"></div>
+        <h3>Add a Photo or Video</h3>
+        <label class="upload-label" for="memoryFile">Escolha uma foto ou vídeo</label>
+        <input type="file" id="memoryFile" accept="image/*,video/*">
+        <input type="text" id="memoryUploadTitle" maxlength="100" placeholder="Título da lembrança">
+        <textarea id="memoryUploadSubtitle" maxlength="300" placeholder="Subtítulo ou comentário"></textarea>
+        <label class="upload-label" for="memoryUploadCategory">Categoria da lembrança</label>
+        <select id="memoryUploadCategory" class="upload-category">
+            <option value="us">US</option>
+            <option value="dates">DATES</option>
+            <option value="special-days">SPECIAL DAYS</option>
+            <option value="videos">VIDEOS</option>
+        </select>
+        <button id="uploadMemoryButton" type="button" onclick="addMemoryUpload()">ADD TO GALLERY</button>
+        <p id="uploadStatus" class="upload-status" role="status" aria-live="polite"></p>
+
     </div>
 
 
@@ -837,6 +860,7 @@
     </button>
 
     <img id="modalImage" src="" alt="Imagem ampliada">
+    <video id="modalVideo" controls playsinline hidden></video>
 
 </div>
 

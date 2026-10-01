@@ -186,6 +186,12 @@ body {
     object-fit: cover;
 }
 
+.image-container > video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 .category {
     position: absolute;
     left: 20px;
@@ -467,9 +473,9 @@ body {
 }
 
 .photo-filter {
-    border: 1px solid #ccc;
     background: white;
     padding: 9px 15px;
+    border-radius: 14px;
     font-size: 10px;
     font-weight: 700;
     cursor: pointer;
@@ -477,7 +483,7 @@ body {
 
 .photo-filter.active,
 .photo-filter:hover {
-    background: var(--dark);
+    background: var(--red);
     color: white;
 }
 
@@ -485,7 +491,7 @@ body {
     max-width: 1200px;
     margin: auto;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 10px;
 }
 
@@ -493,6 +499,7 @@ body {
     height: 280px;
     overflow: hidden;
     cursor: pointer;
+    border-radius: 8px;
 }
 
 .gallery-item img {
@@ -501,6 +508,53 @@ body {
     object-fit: cover;
     transition: transform .5s;
 }
+
+.gallery-item video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #111;
+}
+
+.gallery-pagination {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 28px auto 60px;
+}
+
+.gallery-page-button {
+    min-width: 40px;
+    padding: 10px 13px;
+    border-radius: 10px;
+    background: white;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.gallery-page-button.active,
+.gallery-page-button:hover {
+    color: white;
+    background: var(--red);
+}
+
+.gallery-caption {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 24px 12px 10px;
+    color: white;
+    background: linear-gradient(transparent, rgba(0, 0, 0, .75));
+    font-size: 12px;
+}
+
+.gallery-caption strong,
+.gallery-caption span { display: block; }
+.gallery-caption span { margin-top: 3px; opacity: .85; }
+
+.gallery-item { position: relative; }
 
 .gallery-item:hover img {
     transform: scale(1.06);
@@ -618,7 +672,7 @@ body {
     max-width: 800px;
     margin: 0 auto 50px;
     background: white;
-    border: 1px solid #ddd;
+    border-radius: 13px;
     padding: 30px;
 }
 
@@ -636,6 +690,7 @@ body {
     margin-bottom: 10px;
     font-family: inherit;
     outline: none;
+    border-radius: 8px;
 }
 
 .add-news textarea {
@@ -650,7 +705,37 @@ body {
     padding: 13px 20px;
     font-weight: 800;
     cursor: pointer;
+    Border-radius: 8px;
 }
+
+.upload-divider {
+    border-top: 1px solid #eee;
+    margin: 28px 0;
+}
+
+.upload-help, .upload-status {
+    color: var(--gray);
+    margin: -10px 0 18px;
+    font-size: 14px;
+}
+
+.add-news .upload-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.add-news input[type="file"] { background: #fafafa; }
+.add-news .upload-category {
+    width: 100%;
+    border: 1px solid #ddd;
+    padding: 13px;
+    margin-bottom: 12px;
+    font: inherit;
+    border-radius: 8px;
+    background: white;
+}
+.add-news .upload-status { margin: 12px 0 0; }
 
 
 /* ================= MODAL ================= */
@@ -664,6 +749,11 @@ body {
     align-items: center;
     z-index: 1000;
     padding: 30px;
+}
+
+.image-modal video {
+    max-width: min(100%, 1000px);
+    max-height: 85vh;
 }
 
 .image-modal.show {
@@ -816,4 +906,8 @@ footer span {
         grid-template-columns: 1fr;
         gap: 8px;
     }
+}
+
+@media (min-width: 801px) and (max-width: 1050px) {
+    .gallery { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
