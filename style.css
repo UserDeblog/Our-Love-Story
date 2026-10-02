@@ -713,6 +713,8 @@ body {
     margin: 28px 0;
 }
 
+[hidden] { display: none !important; }
+
 .upload-help, .upload-status {
     color: var(--gray);
     margin: -10px 0 18px;

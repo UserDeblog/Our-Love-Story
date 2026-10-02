@@ -76,42 +76,11 @@ const originalMemories = memories.slice();
 const MEMORY_CAROUSEL_LIMIT = 6;
 const GALLERY_PAGE_SIZE = 24;
 
-const MEMORY_DB_NAME = "ourLoveChronicleMedia";
-const MEMORY_STORE_NAME = "memories";
+const supabaseClient = window.supabase?.createClient(
+    window.SUPABASE_CONFIG?.url,
+    window.SUPABASE_CONFIG?.publishableKey
+);
 let uploadedMemories = [];
-let uploadedObjectUrls = [];
-
-function openMemoryDatabase() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(MEMORY_DB_NAME, 1);
-        request.onupgradeneeded = () => {
-            if (!request.result.objectStoreNames.contains(MEMORY_STORE_NAME)) {
-                request.result.createObjectStore(MEMORY_STORE_NAME, { keyPath: "id" });
-            }
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-async function getSavedMemories() {
-    const database = await openMemoryDatabase();
-    return new Promise((resolve, reject) => {
-        const request = database.transaction(MEMORY_STORE_NAME).objectStore(MEMORY_STORE_NAME).getAll();
-        request.onsuccess = () => { database.close(); resolve(request.result); };
-        request.onerror = () => { database.close(); reject(request.error); };
-    });
-}
-
-async function saveMemory(record) {
-    const database = await openMemoryDatabase();
-    return new Promise((resolve, reject) => {
-        const transaction = database.transaction(MEMORY_STORE_NAME, "readwrite");
-        transaction.objectStore(MEMORY_STORE_NAME).put(record);
-        transaction.oncomplete = () => { database.close(); resolve(); };
-        transaction.onerror = () => { database.close(); reject(transaction.error); };
-    });
-}
 
 function buildMemoryDots() {
     const container = document.getElementById("memoryDots");
@@ -212,6 +181,7 @@ function renderGalleryPage(page = 1) {
 function addGalleryItem(memory) {
     const item = document.createElement("div");
     item.className = "gallery-item";
+    item.dataset.uploaded = "true";
     item.dataset.category = memory.category || "us";
     item.dataset.type = memory.type || "image";
     if (memory.type === "video") {
@@ -250,13 +220,27 @@ function addGalleryItem(memory) {
 renderGalleryPage(1);
 
 async function loadSavedMemories() {
+    if (!supabaseClient) return;
     try {
-        const records = await getSavedMemories();
-        const savedMemories = records.sort((a, b) => a.createdAt - b.createdAt).map(record => {
-            const image = URL.createObjectURL(record.file);
-            uploadedObjectUrls.push(image);
-            return { image, title: record.title, comment: record.subtitle, type: record.type, category: record.category || "us" };
+        const { data: records, error } = await supabaseClient
+            .from("memories")
+            .select("id, title, subtitle, category, media_type, file_path, created_at")
+            .order("created_at", { ascending: true });
+        if (error) throw error;
+
+        const savedMemories = records.map(record => {
+            const { data } = supabaseClient.storage.from("memories").getPublicUrl(record.file_path);
+            return {
+                id: record.id,
+                image: data.publicUrl,
+                title: record.title,
+                comment: record.subtitle,
+                type: record.media_type,
+                category: record.category,
+                createdAt: record.created_at
+            };
         });
+        document.querySelectorAll(".gallery-item[data-uploaded='true']").forEach(item => item.remove());
         savedMemories.forEach(addGalleryItem);
         uploadedMemories = savedMemories.slice().reverse();
         const carouselMemories = uploadedMemories.slice(0, MEMORY_CAROUSEL_LIMIT);
@@ -267,11 +251,20 @@ async function loadSavedMemories() {
         showMemory(memoryIndex);
         renderGalleryPage(1);
     } catch (error) {
-        console.error("Não foi possível carregar as lembranças salvas.", error);
+        console.error("Não foi possível carregar as lembranças do Supabase.", error);
+        document.getElementById("uploadStatus").textContent = "Não foi possível carregar as lembranças. Confira a configuração do Supabase.";
     }
 }
 
-loadSavedMemories();
+function initializeSupabase() {
+    if (!supabaseClient) {
+        document.getElementById("uploadStatus").textContent = "O Supabase não carregou. Verifique a URL, a Publishable key e a conexão.";
+        return;
+    }
+    loadSavedMemories();
+}
+
+initializeSupabase();
 
 async function addMemoryUpload() {
     const fileInput = document.getElementById("memoryFile");
@@ -280,6 +273,10 @@ async function addMemoryUpload() {
     const categoryInput = document.getElementById("memoryUploadCategory");
     const status = document.getElementById("uploadStatus");
     const file = fileInput.files[0];
+    if (!supabaseClient) {
+        status.textContent = "O armazenamento não está disponível. Tente novamente mais tarde.";
+        return;
+    }
     const title = titleInput.value.trim();
     const subtitle = subtitleInput.value.trim();
     if (!file || !title || !subtitle) {
@@ -290,21 +287,45 @@ async function addMemoryUpload() {
         status.textContent = "Escolha um arquivo de imagem ou vídeo válido.";
         return;
     }
-    const record = {
-        id: (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`),
-        title,
-        subtitle,
-        category: categoryInput.value,
-        type: file.type.startsWith("video/") ? "video" : "image",
-        file,
-        createdAt: Date.now()
-    };
-    status.textContent = "Salvando lembrança…";
+    if (file.size > 100 * 1024 * 1024) {
+        status.textContent = "O arquivo precisa ter até 100 MB.";
+        return;
+    }
+    const mediaType = file.type.startsWith("video/") ? "video" : "image";
+    const filePath = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    status.textContent = "Enviando arquivo para o Supabase…";
     try {
-        await saveMemory(record);
-        const image = URL.createObjectURL(file);
-        uploadedObjectUrls.push(image);
-        const memory = { image, title, comment: subtitle, type: record.type, category: record.category };
+        const { error: storageError } = await supabaseClient.storage
+            .from("memories")
+            .upload(filePath, file, { contentType: file.type, upsert: false });
+        if (storageError) throw storageError;
+
+        const { data: publicFile } = supabaseClient.storage.from("memories").getPublicUrl(filePath);
+        const { data: inserted, error: rowError } = await supabaseClient
+            .from("memories")
+            .insert({
+                title,
+                subtitle,
+                category: categoryInput.value,
+                media_type: mediaType,
+                file_path: filePath
+            })
+            .select("id, created_at")
+            .single();
+        if (rowError) {
+            await supabaseClient.storage.from("memories").remove([filePath]);
+            throw rowError;
+        }
+
+        const memory = {
+            id: inserted.id,
+            image: publicFile.publicUrl,
+            title,
+            comment: subtitle,
+            type: mediaType,
+            category: categoryInput.value,
+            createdAt: inserted.created_at
+        };
         uploadedMemories.unshift(memory);
         memories.unshift(memory);
         memories.length = Math.min(memories.length, MEMORY_CAROUSEL_LIMIT);
@@ -316,17 +337,17 @@ async function addMemoryUpload() {
             || (activeGalleryFilter === "videos" && (item.dataset.type === "video" || item.dataset.category === "videos"))
             || item.dataset.category === activeGalleryFilter).length;
         const uploadedMatchesFilter = activeGalleryFilter === "all"
-            || (activeGalleryFilter === "videos" && (record.type === "video" || record.category === "videos"))
-            || activeGalleryFilter === record.category;
+            || (activeGalleryFilter === "videos" && (mediaType === "video" || categoryInput.value === "videos"))
+            || activeGalleryFilter === categoryInput.value;
         renderGalleryPage(uploadedMatchesFilter ? Math.ceil(matchingCount / GALLERY_PAGE_SIZE) : 1);
         fileInput.value = "";
         titleInput.value = "";
         subtitleInput.value = "";
         categoryInput.value = "us";
-        status.textContent = "Lembrança adicionada à galeria e ao carrossel!";
+        status.textContent = "Lembrança enviada e compartilhada na galeria!";
     } catch (error) {
-        console.error(error);
-        status.textContent = "Não foi possível salvar. Verifique o espaço disponível no navegador e tente novamente.";
+        console.error("Falha ao enviar mídia ao Supabase.", error);
+        status.textContent = "Não foi possível enviar. Verifique sua conexão e as políticas configuradas no Supabase.";
     }
 }
 
