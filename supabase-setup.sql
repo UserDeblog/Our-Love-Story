@@ -56,6 +56,41 @@ create policy "Gallery admins can delete memories"
     on public.memories for delete to authenticated
     using (public.is_gallery_admin());
 
+-- Daily News entries are stored here. Anyone can publish, while only admins
+-- can edit or delete entries, matching the site's public upload workflow.
+create table if not exists public.daily_news (
+    id uuid primary key default gen_random_uuid(),
+    title text not null check (pg_catalog.length(pg_catalog.btrim(title)) > 0),
+    description text not null check (pg_catalog.length(pg_catalog.btrim(description)) > 0),
+    published_on date not null default current_date,
+    created_at timestamptz not null default now()
+);
+alter table public.daily_news enable row level security;
+revoke all on public.daily_news from anon, authenticated;
+grant select, insert on public.daily_news to anon, authenticated;
+grant update, delete on public.daily_news to authenticated;
+
+drop policy if exists "Public visitors can read daily news" on public.daily_news;
+create policy "Public visitors can read daily news"
+    on public.daily_news for select to anon, authenticated
+    using (true);
+
+drop policy if exists "Public visitors can publish daily news" on public.daily_news;
+create policy "Public visitors can publish daily news"
+    on public.daily_news for insert to anon, authenticated
+    with check (true);
+
+drop policy if exists "Gallery admins can edit daily news" on public.daily_news;
+create policy "Gallery admins can edit daily news"
+    on public.daily_news for update to authenticated
+    using (public.is_gallery_admin())
+    with check (public.is_gallery_admin());
+
+drop policy if exists "Gallery admins can delete daily news" on public.daily_news;
+create policy "Gallery admins can delete daily news"
+    on public.daily_news for delete to authenticated
+    using (public.is_gallery_admin());
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('memories', 'memories', true, 104857600, array['image/*', 'video/*'])
 on conflict (id) do update set

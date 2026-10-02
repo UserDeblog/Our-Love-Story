@@ -436,6 +436,29 @@ body {
     line-height: 1.5;
 }
 
+.news-actions {
+    grid-column: 2;
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.news-actions button,
+#cancelNewsEdit {
+    border: 0;
+    border-radius: 7px;
+    padding: 8px 12px;
+    background: #f1e6e7;
+    color: var(--red);
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.news-actions button:hover,
+#cancelNewsEdit:hover {
+    background: #ead3d5;
+}
+
 
 /* ================= PAGE HEADER ================= */
 
@@ -952,6 +975,8 @@ footer span {
         grid-template-columns: 1fr;
         gap: 8px;
     }
+
+    .news-actions { grid-column: 1; }
 }
 
 @media (min-width: 801px) and (max-width: 1050px) {

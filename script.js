@@ -42,32 +42,32 @@ updateLoveCounter();
 
 const memories = [
     {
-        image: "images/foto31.jpeg",
+        image: "images/foto1.jpg",
         title: "UM DOS DIAS QUE PASSAMOS MAIS TEMPO JUNTOS",
         comment: "Dizem que alguns minutos mudam tudo, e mudam mesmo. A nossa realidade se transforma em momentos quando passamos tempo de qualidade juntos."
     },
     {
-        image: "images/foto8.jpeg",
+        image: "images/foto2.jpg",
         title: "VIMOS O PÔR DO SOL JUNTOS",
         comment: "Foi um dia que a gente foi no mirante, no quebrando silencio. Vimos o pôr do sol juntos. Primeira vez que a gente viu um pôr do sol juntos."
     },
     {
-        image: "images/foto9.jpeg",
+        image: "images/foto3.jpg",
         title: "MINHA MÃE TIROU A FOTO DA GENTE",
         comment: "Tentando ficar charmosos, mas a gente não consegue, e minha mãe não ajuda. Mas mesmo assim, a gente se ama e isso é o que importa."
     },
     {
-        image: "images/foto34.jpeg",
+        image: "images/foto4.jpg",
         title: "DIA NA IGREJA COM A GABI",
         comment: "Foi um dia que a gente foi na igreja, e a gente se divertiu muito."
     },
     {
-        image: "images/foto28.jpeg",
+        image: "images/foto5.jpg",
         title: "FUI NA CASA DA GABI",
         comment: "Algumas memórias não precisam de grandes acontecimentos. Estar junto já faz qualquer momento valer a pena."
     },
     {
-        image: "images/foto50.jpeg",
+        image: "images/foto6.jpg",
         title: "NÓS DOIS, FAZENDO GRACINHA",
         comment: "Estarmos juntos já é motivo suficiente para transformar qualquer dia em uma lembrança especial."
     }
@@ -75,6 +75,7 @@ const memories = [
 const originalMemories = memories.slice();
 const MEMORY_CAROUSEL_LIMIT = 6;
 const GALLERY_PAGE_SIZE = 24;
+const NEWS_PAGE_SIZE = 6;
 
 const supabaseClient = window.supabase?.createClient(
     window.SUPABASE_CONFIG?.url,
@@ -130,7 +131,7 @@ function showMemory(index) {
 buildMemoryDots();
 
 showMemory(0);
-window.setInterval(() => showMemory(memoryIndex + 1), 4000);
+window.setInterval(() => showMemory(memoryIndex + 1), 9000);
 
 let activeGalleryFilter = "all";
 
@@ -246,9 +247,9 @@ function updateGalleryAdminUI() {
     if (galleryAdminIsAllowed) {
         message.textContent = `Modo de administração ativo para ${galleryAdminUser.email}.`;
     } else if (galleryAdminUser) {
-        message.textContent = "Esta conta não tem permissão para apagar fotos.";
+        message.textContent = "Esta conta não tem permissão administrativa para gerenciar fotos ou notícias.";
     } else {
-        message.textContent = "Entre como administrador para apagar uploads indesejados.";
+        message.textContent = "Entre como administrador para editar ou apagar fotos e notícias.";
     }
     document.querySelectorAll(".gallery-delete-button").forEach(button => {
         button.hidden = !galleryAdminIsAllowed;
@@ -263,6 +264,7 @@ async function refreshGalleryAdminPermission() {
         else console.error("Não foi possível verificar a permissão administrativa.", error);
     }
     updateGalleryAdminUI();
+    renderNews();
 }
 
 async function loginGalleryAdmin() {
@@ -408,6 +410,12 @@ async function initializeSupabase() {
     galleryAdminUser = data?.session?.user || null;
     await refreshGalleryAdminPermission();
     await loadSavedMemories();
+    try {
+        await loadSavedNews();
+    } catch (newsError) {
+        console.error("Não foi possível carregar as notícias salvas.", newsError);
+        document.getElementById("newsStatus").textContent = "Não foi possível carregar as notícias salvas. Execute o SQL atualizado do Supabase.";
+    }
     supabaseClient.auth.onAuthStateChange((_event, session) => {
         galleryAdminUser = session?.user || null;
         galleryAdminIsAllowed = false;
@@ -568,7 +576,7 @@ navButtons.forEach(button => {
    NOTÍCIAS INICIAIS
 ========================================= */
 
-let news = [
+const starterNews = [
 
     {
         date: "14 SEP 2026",
@@ -592,91 +600,73 @@ let news = [
     }
 
 ];
+let news = starterNews.slice();
+let editingNewsId = null;
+let newsPage = 1;
 
 
 /* =========================================
    RENDERIZAR NOTÍCIAS
 ========================================= */
 
-function renderNews() {
+function renderNews(page = newsPage) {
+    const homeContainer = document.getElementById("homeNews");
+    const allContainer = document.getElementById("allNews");
+    homeContainer.replaceChildren();
+    allContainer.replaceChildren();
 
-    const homeContainer =
-        document.getElementById("homeNews");
-
-    const allContainer =
-        document.getElementById("allNews");
-
-    homeContainer.innerHTML = "";
-    allContainer.innerHTML = "";
-
-
-    news.forEach(item => {
-
+    const createNewsElement = (item, includeActions) => {
         const element = document.createElement("article");
-
         element.className = "news-item";
+        const date = document.createElement("div");
+        date.className = "news-date";
+        date.textContent = item.date;
+        const content = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = item.title;
+        const description = document.createElement("p");
+        description.textContent = item.description;
+        content.append(title, description);
+        element.append(date, content);
 
-        element.innerHTML = `
+        if (includeActions && item.id && galleryAdminIsAllowed) {
+            const actions = document.createElement("div");
+            actions.className = "news-actions";
+            const editButton = document.createElement("button");
+            editButton.type = "button";
+            editButton.textContent = "EDIT";
+            editButton.addEventListener("click", () => editNews(item.id));
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.textContent = "DELETE";
+            deleteButton.addEventListener("click", () => deleteNews(item.id));
+            actions.append(editButton, deleteButton);
+            element.appendChild(actions);
+        }
+        return element;
+    };
 
-            <div class="news-date">
-                ${item.date}
-            </div>
+    const pageCount = Math.max(1, Math.ceil(news.length / NEWS_PAGE_SIZE));
+    newsPage = Math.min(Math.max(page, 1), pageCount);
+    const visibleNews = news.slice((newsPage - 1) * NEWS_PAGE_SIZE, newsPage * NEWS_PAGE_SIZE);
+    visibleNews.forEach(item => allContainer.appendChild(createNewsElement(item, true)));
+    news.slice(0, 2).forEach(item => homeContainer.appendChild(createNewsElement(item, false)));
 
-            <div>
-
-                <h3>
-                    ${item.title}
-                </h3>
-
-                <p>
-                    ${item.description}
-                </p>
-
-            </div>
-
-        `;
-
-        allContainer.appendChild(
-            element.cloneNode(true)
-        );
-
-    });
-
-
-    news
-        .slice(0, 2)
-        .forEach(item => {
-
-            const element =
-                document.createElement("article");
-
-            element.className =
-                "news-item";
-
-            element.innerHTML = `
-
-                <div class="news-date">
-                    ${item.date}
-                </div>
-
-                <div>
-
-                    <h3>
-                        ${item.title}
-                    </h3>
-
-                    <p>
-                        ${item.description}
-                    </p>
-
-                </div>
-
-            `;
-
-            homeContainer.appendChild(element);
-
+    const pagination = document.getElementById("newsPagination");
+    pagination.replaceChildren();
+    for (let number = 1; number <= pageCount; number++) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `gallery-page-button${number === newsPage ? " active" : ""}`;
+        button.textContent = number;
+        button.setAttribute("aria-label", `Página ${number} das notícias`);
+        button.setAttribute("aria-current", number === newsPage ? "page" : "false");
+        button.addEventListener("click", () => {
+            renderNews(number);
+            document.getElementById("news").scrollIntoView({ behavior: "smooth", block: "start" });
         });
-
+        pagination.appendChild(button);
+    }
 }
 
 renderNews();
@@ -686,69 +676,107 @@ renderNews();
    ADICIONAR NOTÍCIA
 ========================================= */
 
-function addNews() {
-
-    const title =
-        document.getElementById("newsTitle").value.trim();
-
-    const description =
-        document
-            .getElementById("newsDescription")
-            .value
-            .trim();
-
-
+async function addNews() {
+    const title = document.getElementById("newsTitle").value.trim();
+    const description = document.getElementById("newsDescription").value.trim();
+    const status = document.getElementById("newsStatus");
+    const saveButton = document.getElementById("saveNewsButton");
     if (!title || !description) {
-
-        alert(
-            "Preencha o título e a descrição da notícia."
-        );
-
+        status.textContent = "Preencha o título e a descrição da notícia.";
         return;
-
+    }
+    if (!supabaseClient) {
+        status.textContent = "O Supabase não está disponível. Confira a configuração do site.";
+        return;
     }
 
+    saveButton.disabled = true;
+    status.textContent = editingNewsId ? "Salvando alterações…" : "Publicando notícia…";
+    try {
+        const query = editingNewsId
+            ? supabaseClient.from("daily_news").update({ title, description }).eq("id", editingNewsId)
+            : supabaseClient.from("daily_news").insert({ title, description });
+        const { data, error } = await query
+            .select("id, title, description, published_on, created_at")
+            .single();
+        if (error) throw error;
+        const savedItem = mapSavedNews(data);
+        if (editingNewsId) news = news.map(item => item.id === editingNewsId ? savedItem : item);
+        else {
+            news.unshift(savedItem);
+            newsPage = 1;
+        }
+        const wasEditing = Boolean(editingNewsId);
+        cancelNewsEdit();
+        renderNews();
+        status.textContent = wasEditing ? "Notícia atualizada e salva." : "Notícia publicada e salva para todos.";
+    } catch (error) {
+        console.error("Não foi possível salvar a notícia.", error);
+        status.textContent = "Não foi possível salvar. Confira sua conexão e execute o SQL atualizado do Supabase.";
+    } finally {
+        saveButton.disabled = false;
+    }
+}
 
-    const today =
-        new Date();
+function mapSavedNews(record) {
+    const publishedDate = new Date(`${record.published_on}T00:00:00`);
+    return {
+        id: record.id,
+        date: publishedDate.toLocaleDateString("en-US", {
+            day: "2-digit", month: "short", year: "numeric"
+        }).toUpperCase(),
+        title: record.title,
+        description: record.description
+    };
+}
 
-
-    const date =
-        today
-            .toLocaleDateString(
-                "en-US",
-                {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric"
-                }
-            )
-            .toUpperCase();
-
-
-    news.unshift({
-
-        date: date,
-
-        title: title,
-
-        description: description
-
-    });
-
-
-    document.getElementById("newsTitle").value = "";
-
-    document.getElementById("newsDescription").value = "";
-
-
+async function loadSavedNews() {
+    const { data, error } = await supabaseClient.from("daily_news")
+        .select("id, title, description, published_on, created_at")
+        .order("created_at", { ascending: false });
+    if (error) throw error;
+    news = [...(data || []).map(mapSavedNews), ...starterNews];
     renderNews();
+}
 
+function editNews(newsId) {
+    if (!galleryAdminIsAllowed) return;
+    const item = news.find(entry => entry.id === newsId);
+    if (!item) return;
+    editingNewsId = newsId;
+    document.getElementById("newsTitle").value = item.title;
+    document.getElementById("newsDescription").value = item.description;
+    document.getElementById("saveNewsButton").textContent = "SAVE CHANGES";
+    document.getElementById("cancelNewsEdit").hidden = false;
+    document.getElementById("newsStatus").textContent = "Editando notícia. Salve para aplicar as mudanças.";
+    document.getElementById("newsTitle").focus();
+}
 
-    alert(
-        "📰 Notícia publicada no Our Love Chronicle!"
-    );
+function cancelNewsEdit() {
+    editingNewsId = null;
+    document.getElementById("newsTitle").value = "";
+    document.getElementById("newsDescription").value = "";
+    document.getElementById("saveNewsButton").textContent = "PUBLISH NEWS";
+    document.getElementById("cancelNewsEdit").hidden = true;
+}
 
+async function deleteNews(newsId) {
+    if (!galleryAdminIsAllowed) return;
+    const item = news.find(entry => entry.id === newsId);
+    if (!item || !window.confirm(`Apagar a notícia “${item.title}”? Essa ação não pode ser desfeita.`)) return;
+    const status = document.getElementById("newsStatus");
+    status.textContent = "Apagando notícia…";
+    const { data, error } = await supabaseClient.from("daily_news")
+        .delete().eq("id", newsId).select("id");
+    if (error || !data?.length) {
+        console.error("Não foi possível apagar a notícia.", error);
+        status.textContent = "Não foi possível apagar. Entre como administrador e confira se o SQL atualizado foi executado.";
+        return;
+    }
+    news = news.filter(entry => entry.id !== newsId);
+    if (editingNewsId === newsId) cancelNewsEdit();
+    renderNews();
+    status.textContent = "Notícia apagada.";
 }
 
 
