@@ -16,7 +16,7 @@ The site uses the Supabase project URL and publishable key in `supabase-config.j
 3. Publish the updated `index.html`, `script.js`, `style.css`, and `supabase-config.js` through GitHub Pages.
 4. Uploads remain available without signing in. To delete an uploaded memory, sign in as the allowlisted admin from **Our Photos**, then use the × button on the item and confirm.
 
-The `memories` Storage bucket is public for reading and accepts images and videos up to 100 MB. Anyone with the public site link can upload files and add entries to the gallery; only allowlisted admins can delete Supabase uploads. Photos stored in the repository itself must be removed from the project files. The two-person audience is not technically enforced by a public GitHub Pages link.
+The `memories` Storage bucket is public for reading and accepts images and videos up to 100 MB. Anyone with the public site link can upload files and add entries to the gallery; only allowlisted admins can view Storage metadata for deletion and delete Supabase uploads. Storage deletion requires both `SELECT` and `DELETE` policies. Photos stored in the repository itself must be removed from the project files. The two-person audience is not technically enforced by a public GitHub Pages link.
 
 ## Exposed secret key
 

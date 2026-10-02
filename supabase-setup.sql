@@ -73,7 +73,15 @@ create policy "Public visitors can upload gallery media"
 
 drop policy if exists "Uploaders can see their own gallery media" on storage.objects;
 drop policy if exists "Uploaders can remove their own gallery media" on storage.objects;
+drop policy if exists "Gallery admins can view gallery media for deletion" on storage.objects;
 drop policy if exists "Gallery admins can delete gallery media" on storage.objects;
+create policy "Gallery admins can view gallery media for deletion"
+    on storage.objects for select to authenticated
+    using (
+        bucket_id = 'memories'
+        and public.is_gallery_admin()
+    );
+
 create policy "Gallery admins can delete gallery media"
     on storage.objects for delete to authenticated
     using (

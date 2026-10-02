@@ -311,16 +311,31 @@ async function deleteGalleryMemory(memoryId) {
 
     const status = document.getElementById("galleryAdminStatus");
     status.textContent = "Apagando lembrança…";
-    const { error: storageError } = await supabaseClient.storage.from("memories").remove([memory.filePath]);
+    const { data: removedFiles, error: storageError } = await supabaseClient.storage
+        .from("memories")
+        .remove([memory.filePath]);
     if (storageError) {
         console.error(storageError);
-        status.textContent = "Não foi possível apagar o arquivo no Storage.";
+        status.textContent = "O Supabase recusou apagar o arquivo. Confira a policy de DELETE em storage.objects e execute o SQL atualizado.";
         return;
     }
-    const { error: rowError } = await supabaseClient.from("memories").delete().eq("id", memoryId);
+    if (!removedFiles?.some(file => file.name === memory.filePath)) {
+        console.error("Supabase não retornou o arquivo removido.", { filePath: memory.filePath, removedFiles });
+        status.textContent = "O Supabase não confirmou a exclusão. Execute novamente o supabase-setup.sql atualizado (ele libera SELECT e DELETE para o administrador) e tente de novo.";
+        return;
+    }
+    const { data: deletedRows, error: rowError } = await supabaseClient
+        .from("memories")
+        .delete()
+        .eq("id", memoryId)
+        .select("id");
     if (rowError) {
         console.error(rowError);
         status.textContent = "O arquivo foi apagado, mas não foi possível remover o registro da galeria.";
+        return;
+    }
+    if (!deletedRows?.length) {
+        status.textContent = "O arquivo foi apagado, mas o Supabase não removeu o registro. Confira a policy de DELETE em memories.";
         return;
     }
 
