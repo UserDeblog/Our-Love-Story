@@ -20,7 +20,7 @@
 <header class="header">
 
     <div class="top-bar">
-        <span>QUARTA, SETEMBRO 23, 2026</span>
+        <span id="currentDate"></span>
         <span>NEWSPAPER OF OUR LOVE</span>
     </div>
 
@@ -36,7 +36,8 @@
 
         <div class="love-counter">
             <span>TOGETHER FOR</span>
-            <strong id="loveCounter">100 days</strong>
+            <strong id="loveCounter">5 MONTHS · 29 DAYS</strong>
+            <small id="loveCounterTime">00 HOURS · 00 MINUTES · 00 SECONDS</small>
         </div>
 
     </div>
@@ -650,6 +651,31 @@
 
 </footer>
 
+<aside id="musicMixer" class="music-mixer is-collapsed" aria-label="Mixer de música de fundo">
+    <div id="musicMixerPanel" class="music-mixer-panel" aria-hidden="true">
+        <div class="music-mixer-heading">
+            <div>
+                <strong>OUR LOVE RADIO</strong>
+                <small id="musicStatus" aria-live="polite">Música de fundo</small>
+            </div>
+        </div>
+        <label class="sr-only" for="musicTrackSelect">Escolher música</label>
+        <select id="musicTrackSelect" aria-label="Escolher música"></select>
+        <div class="music-controls">
+            <button id="musicPrevious" type="button" aria-label="Música anterior" title="Música anterior">⏮</button>
+            <button id="musicPlayPause" class="music-play-button" type="button" aria-label="Tocar música" title="Tocar música">▶</button>
+            <button id="musicNext" type="button" aria-label="Próxima música" title="Próxima música">⏭</button>
+            <label class="volume-control" for="musicVolume" title="Volume">
+                <span aria-hidden="true">🔊</span>
+                <input id="musicVolume" type="range" min="0" max="1" step="0.01" value="0.35" aria-label="Volume da música">
+            </label>
+        </div>
+    </div>
+    <button id="musicMixerToggle" class="music-mixer-toggle" type="button" aria-label="Abrir mixer de música" aria-expanded="false" aria-controls="musicMixerPanel" title="Abrir mixer de música">
+        <span aria-hidden="true">♫</span>
+    </button>
+    <audio id="backgroundMusic" preload="metadata"></audio>
+</aside>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>

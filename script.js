@@ -8,10 +8,8 @@
    DATA DO RELACIONAMENTO
 ========================================= */
 
-// MUDE ESTA DATA PARA A DATA EM QUE A HISTÓRIA
-// DE VOCÊS COMEÇOU.
-
-const relationshipStart = new Date("2025-01-01");
+// Início da contagem: 3 de abril de 2026, à meia-noite no horário local.
+const relationshipStart = new Date(2026, 3, 3, 0, 0, 0, 0);
 
 
 /* =========================================
@@ -19,21 +17,189 @@ const relationshipStart = new Date("2025-01-01");
 ========================================= */
 
 function updateLoveCounter() {
+    const now = new Date();
+    const elapsedMs = Math.max(0, now.getTime() - relationshipStart.getTime());
+    let cursor = new Date(relationshipStart);
 
-    const today = new Date();
+    let years = now.getFullYear() - cursor.getFullYear();
+    cursor.setFullYear(cursor.getFullYear() + years);
+    if (cursor > now) {
+        years--;
+        cursor = new Date(relationshipStart);
+        cursor.setFullYear(cursor.getFullYear() + years);
+    }
 
-    const difference =
-        today.getTime() - relationshipStart.getTime();
+    let months = (now.getFullYear() - cursor.getFullYear()) * 12 + now.getMonth() - cursor.getMonth();
+    cursor.setMonth(cursor.getMonth() + months);
+    if (cursor > now) {
+        months--;
+        cursor = new Date(relationshipStart);
+        cursor.setFullYear(cursor.getFullYear() + years);
+        cursor.setMonth(cursor.getMonth() + months);
+    }
 
-    const days =
-        Math.floor(difference / (1000 * 60 * 60 * 24));
+    const dayNumber = date => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+    const days = Math.max(0, Math.floor(dayNumber(now) - dayNumber(cursor)));
+    cursor.setDate(cursor.getDate() + days);
+    let remainingMs = Math.max(0, now.getTime() - cursor.getTime());
+    const hours = Math.floor(remainingMs / 3600000);
+    remainingMs %= 3600000;
+    const minutes = Math.floor(remainingMs / 60000);
+    const seconds = Math.floor((remainingMs % 60000) / 1000);
 
-    document.getElementById("loveCounter").textContent =
-        `${days} DAYS`;
+    const duration = [];
+    if (years) duration.push(`${years} ${years === 1 ? "YEAR" : "YEARS"}`);
+    if (months) duration.push(`${months} ${months === 1 ? "MONTH" : "MONTHS"}`);
+    duration.push(`${days} ${days === 1 ? "DAY" : "DAYS"}`);
 
+    document.getElementById("loveCounter").textContent = duration.join(" · ");
+    document.getElementById("loveCounterTime").textContent =
+        `${String(hours).padStart(2, "0")} HOURS · ${String(minutes).padStart(2, "0")} MINUTES · ${String(seconds).padStart(2, "0")} SECONDS`;
+    document.getElementById("currentDate").textContent = new Intl.DateTimeFormat("pt-BR", {
+        weekday: "long", day: "2-digit", month: "long", year: "numeric"
+    }).format(now).toLocaleUpperCase("pt-BR");
 }
 
 updateLoveCounter();
+window.setInterval(updateLoveCounter, 1000);
+
+
+/* =========================================
+   MIXER DE MÚSICA DE FUNDO
+========================================= */
+
+const backgroundTracks = [];
+const musicFolderApi = "https://api.github.com/repos/UserDeblog/Our-Love-Story/contents/music/music?ref=master";
+
+const backgroundMusic = document.getElementById("backgroundMusic");
+const musicTrackSelect = document.getElementById("musicTrackSelect");
+const musicPlayPause = document.getElementById("musicPlayPause");
+const musicStatus = document.getElementById("musicStatus");
+const musicMixer = document.getElementById("musicMixer");
+const musicMixerPanel = document.getElementById("musicMixerPanel");
+const musicMixerToggle = document.getElementById("musicMixerToggle");
+let currentTrackIndex = 0;
+
+musicMixerToggle.addEventListener("click", () => {
+    const isOpen = musicMixer.classList.toggle("is-open");
+    musicMixer.classList.toggle("is-collapsed", !isOpen);
+    musicMixerToggle.setAttribute("aria-expanded", String(isOpen));
+    musicMixerToggle.setAttribute("aria-label", `${isOpen ? "Fechar" : "Abrir"} mixer de música`);
+    musicMixerToggle.title = `${isOpen ? "Fechar" : "Abrir"} mixer de música`;
+    musicMixerPanel.setAttribute("aria-hidden", String(!isOpen));
+});
+
+function loadBackgroundTrack(index, shouldPlay = false) {
+    if (!backgroundTracks.length) return;
+    currentTrackIndex = (index + backgroundTracks.length) % backgroundTracks.length;
+    musicTrackSelect.value = String(currentTrackIndex);
+    const file = backgroundTracks[currentTrackIndex].file;
+    backgroundMusic.src = `music/music/${file.split("/").map(encodeURIComponent).join("/")}`;
+    backgroundMusic.load();
+    musicStatus.textContent = backgroundTracks[currentTrackIndex].title;
+    if (shouldPlay) playBackgroundMusic();
+}
+
+async function playBackgroundMusic() {
+    if (!backgroundTracks.length) return;
+    try {
+        await backgroundMusic.play();
+        musicPlayPause.textContent = "❚❚";
+        musicPlayPause.setAttribute("aria-label", "Pausar música");
+        musicPlayPause.title = "Pausar música";
+        musicStatus.textContent = `Tocando: ${backgroundTracks[currentTrackIndex].title}`;
+    } catch (error) {
+        musicPlayPause.textContent = "▶";
+        musicPlayPause.setAttribute("aria-label", "Tocar música");
+        musicPlayPause.title = "Tocar música";
+        musicStatus.textContent = "Toque em play para começar";
+    }
+}
+
+function pauseBackgroundMusic() {
+    backgroundMusic.pause();
+    musicPlayPause.textContent = "▶";
+    musicPlayPause.setAttribute("aria-label", "Tocar música");
+    musicPlayPause.title = "Tocar música";
+    musicStatus.textContent = `Pausado: ${backgroundTracks[currentTrackIndex]?.title || "Música"}`;
+}
+
+document.getElementById("musicPrevious").addEventListener("click", () => {
+    loadBackgroundTrack(currentTrackIndex - 1, !backgroundMusic.paused);
+});
+document.getElementById("musicNext").addEventListener("click", () => {
+    loadBackgroundTrack(currentTrackIndex + 1, !backgroundMusic.paused);
+});
+musicTrackSelect.addEventListener("change", () => {
+    loadBackgroundTrack(Number(musicTrackSelect.value), true);
+});
+musicPlayPause.addEventListener("click", () => {
+    if (backgroundMusic.paused) playBackgroundMusic();
+    else pauseBackgroundMusic();
+});
+document.getElementById("musicVolume").addEventListener("input", event => {
+    backgroundMusic.volume = Number(event.target.value);
+    try { localStorage.setItem("loveChronicleMusicVolume", event.target.value); } catch (_) {}
+});
+backgroundMusic.addEventListener("ended", () => {
+    if (backgroundTracks.length) loadBackgroundTrack(currentTrackIndex + 1, true);
+});
+backgroundMusic.addEventListener("error", () => {
+    musicStatus.textContent = "Não foi possível carregar esta música";
+});
+
+const savedMusicVolume = (() => {
+    try { return localStorage.getItem("loveChronicleMusicVolume"); } catch (_) { return null; }
+})();
+if (savedMusicVolume !== null) document.getElementById("musicVolume").value = savedMusicVolume;
+backgroundMusic.volume = Number(document.getElementById("musicVolume").value);
+
+async function loadBackgroundPlaylist() {
+    musicStatus.textContent = "Carregando músicas da pasta…";
+    musicTrackSelect.disabled = true;
+    document.getElementById("musicPrevious").disabled = true;
+    document.getElementById("musicNext").disabled = true;
+    musicPlayPause.disabled = true;
+    try {
+        const response = await fetch(musicFolderApi, {
+            headers: { Accept: "application/vnd.github+json" }
+        });
+        if (!response.ok) throw new Error(`GitHub API respondeu ${response.status}`);
+        const files = await response.json();
+        const audioExtensions = new Set(["mp3", "m4a", "ogg", "wav", "aac", "flac"]);
+        const tracks = files
+            .filter(file => file.type === "file" && audioExtensions.has(file.name.split(".").pop().toLowerCase()))
+            .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+            .map(file => ({
+                file: file.name,
+                title: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").replace(/\b[a-z]/g, letter => letter.toUpperCase())
+            }));
+        if (!tracks.length) throw new Error("Nenhum arquivo de áudio foi encontrado na pasta music/music.");
+
+        backgroundTracks.push(...tracks);
+        musicTrackSelect.replaceChildren(...backgroundTracks.map((track, index) => {
+            const option = document.createElement("option");
+            option.value = String(index);
+            option.textContent = track.title;
+            return option;
+        }));
+        musicTrackSelect.disabled = false;
+        document.getElementById("musicPrevious").disabled = false;
+        document.getElementById("musicNext").disabled = false;
+        musicPlayPause.disabled = false;
+        loadBackgroundTrack(0);
+    } catch (error) {
+        console.error("Não foi possível listar as músicas no GitHub.", error);
+        musicStatus.textContent = "Não consegui carregar a playlist do GitHub";
+    }
+}
+
+loadBackgroundPlaylist();
+
+document.addEventListener("pointerdown", event => {
+    if (event.target.closest(".music-mixer")) return;
+    if (backgroundMusic.paused) playBackgroundMusic();
+}, { once: true });
 
 
 /* =========================================
