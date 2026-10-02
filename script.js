@@ -63,6 +63,19 @@ function updateLoveCounter() {
 updateLoveCounter();
 window.setInterval(updateLoveCounter, 1000);
 
+const loveIntro = document.getElementById("loveIntro");
+const enterLoveSiteButton = document.getElementById("enterLoveSite");
+enterLoveSiteButton.focus({ preventScroll: true });
+enterLoveSiteButton.addEventListener("click", () => {
+    loveIntro.classList.add("is-leaving");
+    loveIntro.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("intro-active");
+    window.setTimeout(() => {
+        loveIntro.hidden = true;
+        document.querySelector(".nav-btn.active")?.focus({ preventScroll: true });
+    }, 700);
+});
+
 
 /* =========================================
    MIXER DE MÚSICA DE FUNDO
