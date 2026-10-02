@@ -4,11 +4,19 @@ The site uses the Supabase project URL and publishable key in `supabase-config.j
 
 ## Configure the project
 
-1. In the Supabase Dashboard, open **SQL Editor** and run `supabase-setup.sql`.
-2. Publish the updated `index.html`, `script.js`, `style.css`, and `supabase-config.js` through GitHub Pages.
-3. Once GitHub Pages updates, the upload form is available without signing in.
+1. In the Supabase Dashboard, open **SQL Editor** and run the latest `supabase-setup.sql`. If you ran an earlier version, run this updated script again.
+2. To enable delete controls, create your admin account in **Authentication → Users** and add its email to `public.gallery_admins`:
 
-The `memories` Storage bucket is public for reading and accepts images and videos up to 100 MB. Anyone with the public site link can upload files and add entries to the gallery, so only use this mode if that is acceptable. The two-person audience is not technically enforced by a public GitHub Pages link.
+   ```sql
+   insert into public.gallery_admins (email)
+   values ('you@example.com')
+   on conflict (email) do nothing;
+   ```
+
+3. Publish the updated `index.html`, `script.js`, `style.css`, and `supabase-config.js` through GitHub Pages.
+4. Uploads remain available without signing in. To delete an uploaded memory, sign in as the allowlisted admin from **Our Photos**, then use the × button on the item and confirm.
+
+The `memories` Storage bucket is public for reading and accepts images and videos up to 100 MB. Anyone with the public site link can upload files and add entries to the gallery; only allowlisted admins can delete Supabase uploads. Photos stored in the repository itself must be removed from the project files. The two-person audience is not technically enforced by a public GitHub Pages link.
 
 ## Exposed secret key
 

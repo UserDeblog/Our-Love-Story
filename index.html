@@ -326,6 +326,19 @@
     </div>
 
 
+    <div class="gallery-admin-tools">
+        <h3>Manage Gallery</h3>
+        <p id="galleryAdminMessage">Entre como administrador para apagar uploads indesejados.</p>
+        <div id="galleryAdminLogin">
+            <input type="email" id="galleryAdminEmail" autocomplete="username" placeholder="E-mail do administrador">
+            <input type="password" id="galleryAdminPassword" autocomplete="current-password" placeholder="Senha">
+            <button type="button" onclick="loginGalleryAdmin()">ADMIN SIGN IN</button>
+        </div>
+        <button id="galleryAdminLogout" type="button" onclick="logoutGalleryAdmin()" hidden>SIGN OUT</button>
+        <p id="galleryAdminStatus" class="upload-status" role="status" aria-live="polite"></p>
+    </div>
+
+
     <div class="photo-filters">
 
         <button class="photo-filter active" type="button" data-filter="all">

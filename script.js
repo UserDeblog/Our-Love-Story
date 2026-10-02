@@ -81,6 +81,8 @@ const supabaseClient = window.supabase?.createClient(
     window.SUPABASE_CONFIG?.publishableKey
 );
 let uploadedMemories = [];
+let galleryAdminUser = null;
+let galleryAdminIsAllowed = false;
 
 function buildMemoryDots() {
     const container = document.getElementById("memoryDots");
@@ -182,6 +184,7 @@ function addGalleryItem(memory) {
     const item = document.createElement("div");
     item.className = "gallery-item";
     item.dataset.uploaded = "true";
+    if (memory.id) item.dataset.memoryId = memory.id;
     item.dataset.category = memory.category || "us";
     item.dataset.type = memory.type || "image";
     if (memory.type === "video") {
@@ -214,8 +217,130 @@ function addGalleryItem(memory) {
         caption.appendChild(captionSubtitle);
     }
     item.appendChild(caption);
+    if (memory.id) {
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "gallery-delete-button";
+        deleteButton.textContent = "×";
+        deleteButton.setAttribute("aria-label", `Apagar ${memory.title}`);
+        deleteButton.title = "Apagar esta lembrança";
+        deleteButton.hidden = !galleryAdminIsAllowed;
+        deleteButton.addEventListener("click", () => deleteGalleryMemory(memory.id));
+        item.appendChild(deleteButton);
+    }
     document.querySelector(".gallery").append(item);
 }
+
+function updateGalleryAdminUI() {
+    const message = document.getElementById("galleryAdminMessage");
+    const loginPanel = document.getElementById("galleryAdminLogin");
+    const logoutButton = document.getElementById("galleryAdminLogout");
+    if (!supabaseClient) {
+        message.textContent = "O Supabase não está disponível.";
+        loginPanel.hidden = true;
+        logoutButton.hidden = true;
+        return;
+    }
+    loginPanel.hidden = Boolean(galleryAdminUser);
+    logoutButton.hidden = !galleryAdminUser;
+    if (galleryAdminIsAllowed) {
+        message.textContent = `Modo de administração ativo para ${galleryAdminUser.email}.`;
+    } else if (galleryAdminUser) {
+        message.textContent = "Esta conta não tem permissão para apagar fotos.";
+    } else {
+        message.textContent = "Entre como administrador para apagar uploads indesejados.";
+    }
+    document.querySelectorAll(".gallery-delete-button").forEach(button => {
+        button.hidden = !galleryAdminIsAllowed;
+    });
+}
+
+async function refreshGalleryAdminPermission() {
+    galleryAdminIsAllowed = false;
+    if (supabaseClient && galleryAdminUser) {
+        const { data, error } = await supabaseClient.rpc("is_gallery_admin");
+        if (!error) galleryAdminIsAllowed = data === true;
+        else console.error("Não foi possível verificar a permissão administrativa.", error);
+    }
+    updateGalleryAdminUI();
+}
+
+async function loginGalleryAdmin() {
+    const email = document.getElementById("galleryAdminEmail").value.trim();
+    const password = document.getElementById("galleryAdminPassword").value;
+    const status = document.getElementById("galleryAdminStatus");
+    if (!supabaseClient || !email || !password) {
+        status.textContent = "Digite o e-mail e a senha da conta administradora.";
+        return;
+    }
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) {
+        status.textContent = "Não foi possível entrar. Confira as credenciais.";
+        return;
+    }
+    galleryAdminUser = data.user;
+    document.getElementById("galleryAdminPassword").value = "";
+    await refreshGalleryAdminPermission();
+    if (!galleryAdminIsAllowed) {
+        await supabaseClient.auth.signOut();
+        galleryAdminUser = null;
+        updateGalleryAdminUI();
+        status.textContent = "Este e-mail não está autorizado a apagar fotos.";
+        return;
+    }
+    status.textContent = "Admin conectado. Os botões de exclusão estão disponíveis.";
+}
+
+async function logoutGalleryAdmin() {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+        document.getElementById("galleryAdminStatus").textContent = "Não foi possível sair da conta.";
+        return;
+    }
+    galleryAdminUser = null;
+    galleryAdminIsAllowed = false;
+    updateGalleryAdminUI();
+}
+
+async function deleteGalleryMemory(memoryId) {
+    if (!galleryAdminIsAllowed) return;
+    const memory = uploadedMemories.find(item => item.id === memoryId);
+    if (!memory) return;
+    const confirmed = window.confirm(`Apagar “${memory.title}” da galeria? Essa ação não pode ser desfeita.`);
+    if (!confirmed) return;
+
+    const status = document.getElementById("galleryAdminStatus");
+    status.textContent = "Apagando lembrança…";
+    const { error: storageError } = await supabaseClient.storage.from("memories").remove([memory.filePath]);
+    if (storageError) {
+        console.error(storageError);
+        status.textContent = "Não foi possível apagar o arquivo no Storage.";
+        return;
+    }
+    const { error: rowError } = await supabaseClient.from("memories").delete().eq("id", memoryId);
+    if (rowError) {
+        console.error(rowError);
+        status.textContent = "O arquivo foi apagado, mas não foi possível remover o registro da galeria.";
+        return;
+    }
+
+    uploadedMemories = uploadedMemories.filter(item => item.id !== memoryId);
+    const carouselMemories = uploadedMemories.slice(0, MEMORY_CAROUSEL_LIMIT);
+    memories.splice(0, memories.length,
+        ...carouselMemories,
+        ...originalMemories.slice(0, MEMORY_CAROUSEL_LIMIT - carouselMemories.length));
+    const galleryItem = Array.from(document.querySelector(".gallery").children)
+        .find(item => item.dataset.memoryId === memoryId);
+    galleryItem?.remove();
+    memoryIndex = 0;
+    buildMemoryDots();
+    showMemory(0);
+    renderGalleryPage(1);
+    status.textContent = "Lembrança apagada da galeria.";
+}
+
+window.loginGalleryAdmin = loginGalleryAdmin;
+window.logoutGalleryAdmin = logoutGalleryAdmin;
 
 renderGalleryPage(1);
 
@@ -237,6 +362,7 @@ async function loadSavedMemories() {
                 comment: record.subtitle,
                 type: record.media_type,
                 category: record.category,
+                filePath: record.file_path,
                 createdAt: record.created_at
             };
         });
@@ -256,12 +382,23 @@ async function loadSavedMemories() {
     }
 }
 
-function initializeSupabase() {
+async function initializeSupabase() {
     if (!supabaseClient) {
+        updateGalleryAdminUI();
         document.getElementById("uploadStatus").textContent = "O Supabase não carregou. Verifique a URL, a Publishable key e a conexão.";
         return;
     }
-    loadSavedMemories();
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) console.error("Não foi possível recuperar a sessão do administrador.", error);
+    galleryAdminUser = data?.session?.user || null;
+    await refreshGalleryAdminPermission();
+    await loadSavedMemories();
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+        galleryAdminUser = session?.user || null;
+        galleryAdminIsAllowed = false;
+        updateGalleryAdminUI();
+        window.setTimeout(() => refreshGalleryAdminPermission(), 0);
+    });
 }
 
 initializeSupabase();
@@ -324,6 +461,7 @@ async function addMemoryUpload() {
             comment: subtitle,
             type: mediaType,
             category: categoryInput.value,
+            filePath,
             createdAt: inserted.created_at
         };
         uploadedMemories.unshift(memory);
