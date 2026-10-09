@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css">
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -80,6 +81,10 @@
 
         <button class="nav-btn" data-page="news">
             DAILY NEWS
+        </button>
+
+        <button class="nav-btn" data-page="our-plans">
+            NOSSOS PLANOS
         </button>
 
     </nav>
@@ -635,6 +640,156 @@
 
 </section>
 
+<!-- ================= NOSSA HISTÓRIA JUNTOS ================= -->
+
+<section id="our-plans" class="page">
+    <div class="page-header">
+        <span>OUR NEXT CHAPTERS</span>
+        <h2>Nossos planos</h2>
+        <p>Cartas para o futuro, lugares para conhecer e coisas para viver juntos.</p>
+    </div>
+
+    <div class="plans-layout">
+        <section class="plan-panel letters-panel">
+            <div class="plan-panel-heading">
+                <span class="section-label">PALAVRAS GUARDADAS</span>
+                <h3>Cartinhas &amp; cápsula do tempo</h3>
+                <p>Mensagens para abrir agora e palavras guardadas para o futuro.</p>
+            </div>
+            <div class="plan-subnav" role="tablist" aria-label="Mensagens para nós">
+                <button class="plan-subtab active" id="lettersTab" type="button" role="tab" aria-selected="true" aria-controls="lettersPanel">Cartinhas</button>
+                <button class="plan-subtab" id="capsulesTab" type="button" role="tab" aria-selected="false" aria-controls="capsulesPanel">Cápsula do tempo</button>
+            </div>
+            <section id="lettersPanel" class="plan-subpanel" role="tabpanel" aria-labelledby="lettersTab">
+                <p class="plan-panel-hint">Abra uma cartinha para ler a mensagem inteira e ver os detalhes.</p>
+                <form id="letterForm" class="plan-form">
+                    <input id="letterTitle" type="text" maxlength="90" placeholder="Título da cartinha" required>
+                    <textarea id="letterMessage" maxlength="4000" placeholder="Escreva uma cartinha…" required></textarea>
+                    <div class="plan-form-row">
+                        <label for="letterOpenDate">Abrir em (opcional)
+                            <input id="letterOpenDate" type="date">
+                        </label>
+                        <label for="letterAuthor">De
+                            <select id="letterAuthor">
+                                <option value="Nós dois">Nós dois</option>
+                                <option value="Samuel">Samuel</option>
+                                <option value="Gabi">Gabi</option>
+                            </select>
+                        </label>
+                    </div>
+                    <fieldset class="letter-permissions" id="letterPermissions">
+                        <legend>Permissões desta cartinha (admin)</legend>
+                        <label><input id="letterCanEdit" type="checkbox" checked> Pode ser editada</label>
+                        <label><input id="letterCanDelete" type="checkbox" checked> Pode ser apagada</label>
+                    </fieldset>
+                    <button id="saveLetterButton" type="submit">GUARDAR CARTINHA ♥</button>
+                    <button id="cancelLetterEdit" class="secondary-plan-button" type="button" hidden>Cancelar edição</button>
+                    <p id="letterStatus" class="upload-status" role="status" aria-live="polite"></p>
+                </form>
+                <div id="lettersList" class="letters-list" aria-live="polite"></div>
+            </section>
+            <section id="capsulesPanel" class="plan-subpanel" role="tabpanel" aria-labelledby="capsulesTab" hidden>
+                <p class="capsule-lock-note">🔒 O texto da cápsula é privado: só aparece para o administrador, e apenas depois da data de abertura.</p>
+                <div id="capsuleAdminGate" class="capsule-admin-gate">
+                    <p>Entre no modo administrador para criar cápsulas ou ler as que já chegaram à data.</p>
+                    <button id="goToAdminLogin" class="secondary-plan-button" type="button">IR PARA O LOGIN DE ADMIN</button>
+                </div>
+                <form id="capsuleForm" class="plan-form capsule-form" hidden>
+                    <h4>Guardar uma cápsula do tempo</h4>
+                    <input id="capsuleTitle" type="text" maxlength="90" placeholder="Título da cápsula" required>
+                    <textarea id="capsuleMessage" maxlength="6000" placeholder="O que você quer que o futuro de vocês leia?" required></textarea>
+                    <div class="plan-form-row">
+                        <label for="capsuleOpenDate">Abrir em
+                            <input id="capsuleOpenDate" type="date" required>
+                        </label>
+                        <label for="capsuleAuthor">De
+                            <select id="capsuleAuthor">
+                                <option value="Nós dois">Nós dois</option>
+                                <option value="Samuel">Samuel</option>
+                                <option value="Gabi">Gabi</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="capsule-date-shortcuts" aria-label="Atalhos para data de abertura">
+                        <button type="button" data-capsule-years="1">Daqui a 1 ano</button>
+                        <button type="button" data-capsule-years="5">Daqui a 5 anos</button>
+                        <button type="button" data-capsule-years="10">Daqui a 10 anos</button>
+                    </div>
+                    <button id="saveCapsuleButton" type="submit">SELAR CÁPSULA 🔒</button>
+                    <p id="capsuleStatus" class="upload-status" role="status" aria-live="polite"></p>
+                </form>
+                <div id="capsulesList" class="letters-list" aria-live="polite"></div>
+            </section>
+        </section>
+
+        <section class="plan-panel map-panel">
+            <div class="plan-panel-heading">
+                <span class="section-label">NOSSO MAPA</span>
+                <h3>Já fomos &amp; queremos ir</h3>
+                <p>Explore o globo, marque os lugares de vocês e guarde uma foto junto com cada lembrança.</p>
+            </div>
+            <div id="loveMap" class="love-map" role="application" aria-label="Mapa interativo do mundo. Toque para selecionar um lugar.">
+                <div id="loveMapCanvas" class="love-map-canvas"></div>
+                <div id="mapLoading" class="map-loading" role="status">Carregando o globo…</div>
+                <button id="mapGoTaubate" class="map-focus-button" type="button" title="Voltar para Taubaté">⌖ Taubaté</button>
+                <button id="mapFullscreenButton" class="map-fullscreen-button" type="button" aria-pressed="false">⛶ Tela cheia</button>
+            </div>
+            <form id="placeForm" class="plan-form place-form">
+                <input id="placeName" type="text" maxlength="100" placeholder="Nome do lugar (ex.: Paris, França)" required>
+                <div class="address-search">
+                    <label for="placeAddress">Buscar endereço ou cidade para mover o ponto
+                        <input id="placeAddress" type="search" maxlength="150" placeholder="Ex.: Rio de Janeiro, RJ">
+                    </label>
+                    <button id="searchPlaceAddress" type="button">BUSCAR NO MAPA</button>
+                    <div id="addressResultsWrap" hidden>
+                        <label for="addressResults">Escolha o resultado
+                            <select id="addressResults"></select>
+                        </label>
+                    </div>
+                    <p id="addressSearchStatus" role="status" aria-live="polite">Busca pelo OpenStreetMap. Não inclua endereço residencial exato ou dados pessoais. © OpenStreetMap contributors.</p>
+                </div>
+                <div class="plan-form-row">
+                    <label for="placeKind">Esse lugar…
+                        <select id="placeKind"><option value="dream">é um sonho ✨</option><option value="visited">já visitamos ♥</option></select>
+                    </label>
+                    <label for="placeDate">Data (opcional)
+                        <input id="placeDate" type="date">
+                    </label>
+                </div>
+                <div class="place-photo-picker-row">
+                    <span class="place-photo-label">Foto do lugar <small>(opcional)</small></span>
+                    <label class="place-photo-picker" for="placePhoto">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h3l1.4-2h7.2l1.4 2h3A1.5 1.5 0 0 1 21.5 9v9A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                        <span>Escolher foto</span>
+                    </label>
+                    <input id="placePhoto" class="place-photo-input" type="file" accept="image/*" aria-label="Escolher foto deste lugar">
+                    <span id="placePhotoName" class="place-photo-name">Nenhuma foto escolhida</span>
+                </div>
+                <span id="placeCoordinates" class="place-coordinate-hint">Toque no globo para escolher onde fica o lugar. Um ponto inicial já está marcado em Taubaté.</span>
+                <button id="savePlaceButton" type="submit">ADICIONAR AO MAPA</button>
+                <button id="cancelPlaceEdit" class="secondary-plan-button" type="button" hidden>Cancelar edição</button>
+                <p id="placeStatus" class="upload-status" role="status" aria-live="polite">Taubaté já está selecionada como ponto inicial.</p>
+            </form>
+            <div class="map-legend"><span>♥ Já fomos</span><span>✦ Queremos ir</span></div>
+            <div id="placesList" class="places-list" aria-live="polite"></div>
+        </section>
+
+        <section class="plan-panel checklist-panel">
+            <div class="plan-panel-heading">
+                <span class="section-label">COISAS PARA VIVER</span>
+                <h3>Antes de namorar</h3>
+                <p>Uma checklist compartilhada para acompanhar essa lista especial.</p>
+            </div>
+            <form id="checklistForm" class="plan-form checklist-form">
+                <input id="checklistText" type="text" maxlength="180" placeholder="Adicionar uma coisa da lista…" required>
+                <button type="submit">ADICIONAR À LISTA +</button>
+            </form>
+            <div class="checklist-progress"><span id="checklistProgress">0 de 0 concluídos</span><div class="progress-track"><span id="checklistProgressBar"></span></div></div>
+            <ul id="checklistItems" class="checklist-items" aria-live="polite"></ul>
+        </section>
+    </div>
+</section>
+
 </main>
 
 
@@ -650,6 +805,17 @@
     <img id="modalImage" src="" alt="Imagem ampliada">
     <video id="modalVideo" controls playsinline hidden></video>
 
+</div>
+
+<div id="letterDetailModal" class="letter-detail-overlay" role="dialog" aria-modal="true" aria-labelledby="letterDetailTitle" hidden>
+    <article class="letter-detail-card">
+        <button id="closeLetterDetail" class="letter-detail-close" type="button" aria-label="Fechar cartinha">×</button>
+        <span class="section-label">UMA CARTINHA DE VOCÊS</span>
+        <h2 id="letterDetailTitle"></h2>
+        <div id="letterDetailMeta" class="letter-detail-meta"></div>
+        <div id="letterDetailBody" class="letter-detail-body"></div>
+        <div id="letterDetailActions" class="letter-detail-actions"></div>
+    </article>
 </div>
 
 
@@ -702,6 +868,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="script.js"></script>
+<script type="module">
+    try {
+        const maplibregl = await import("https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs");
+        window.maplibregl = maplibregl;
+        window.dispatchEvent(new Event("maplibre-ready"));
+    } catch (error) {
+        console.error("Não foi possível carregar o mapa interativo.", error);
+        const loading = document.getElementById("mapLoading");
+        if (loading) loading.textContent = "Não foi possível carregar o globo. Confira sua conexão e atualize a página.";
+    }
+</script>
 
 </body>
 </html>

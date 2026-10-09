@@ -264,6 +264,673 @@ let uploadedMemories = [];
 let galleryAdminUser = null;
 let galleryAdminIsAllowed = false;
 
+/* =========================================
+   CARTINHAS, MAPA E CHECKLIST DO CASAL
+========================================= */
+
+const plansStorageKeys = {
+    letters: "loveChronicleLetters",
+    places: "loveChroniclePlaces",
+    checklist: "loveChronicleChecklist"
+};
+const planData = Object.fromEntries(Object.entries(plansStorageKeys).map(([key, storageKey]) => {
+    try { return [key, JSON.parse(localStorage.getItem(storageKey) || "[]")]; }
+    catch (_) { return [key, []]; }
+}));
+planData.capsules = [];
+let selectedMapPoint = null;
+let editingLetterId = null;
+let editingPlaceId = null;
+let activeLetterDetail = null;
+let lovePlacesMap = null;
+let lovePlacesMapReady = false;
+let selectedPointMarker = null;
+let taubateDefaultMarker = null;
+let lovePlaceMarkers = [];
+const todayISO = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+document.getElementById("letterOpenDate").min = todayISO();
+
+const taubateStartingPoint = { longitude: -45.5553, latitude: -23.0264 };
+selectedMapPoint = taubateStartingPoint;
+document.getElementById("placeName").value = "Taubaté, São Paulo, Brasil";
+document.getElementById("placeCoordinates").textContent = "Ponto inicial selecionado em Taubaté, São Paulo. Você pode mudar o ponto tocando no globo.";
+
+function initializeLovePlacesMap() {
+    const maplibregl = window.maplibregl;
+    if (!maplibregl || lovePlacesMap) return;
+    lovePlacesMap = new maplibregl.Map({
+        container: "loveMapCanvas",
+        style: {
+            version: 8,
+            sources: {
+                imagery: {
+                    type: "raster",
+                    tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+                    tileSize: 256,
+                    maxzoom: 19,
+                    attribution: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+                }
+            },
+            layers: [{ id: "world-imagery", type: "raster", source: "imagery" }]
+        },
+        center: [taubateStartingPoint.longitude, taubateStartingPoint.latitude],
+        zoom: 2.1,
+        maxZoom: 18,
+        minZoom: 1.2,
+        attributionControl: { compact: false }
+    });
+    lovePlacesMap.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
+    lovePlacesMap.on("style.load", () => lovePlacesMap.setProjection({ type: "globe" }));
+    lovePlacesMap.on("moveend", () => { if (lovePlacesMapReady) renderPlaceMarkers(); });
+    lovePlacesMap.on("resize", () => { if (lovePlacesMapReady) renderPlaceMarkers(); });
+    lovePlacesMap.on("click", event => {
+        selectedMapPoint = { longitude: Number(event.lngLat.lng.toFixed(5)), latitude: Number(event.lngLat.lat.toFixed(5)) };
+        if (taubateDefaultMarker) { taubateDefaultMarker.remove(); taubateDefaultMarker = null; }
+        document.getElementById("placeCoordinates").textContent = `Ponto selecionado: ${selectedMapPoint.latitude}°, ${selectedMapPoint.longitude}°. Dê um nome ao lugar ou mantenha Taubaté.`;
+        if (selectedPointMarker) selectedPointMarker.remove();
+        selectedPointMarker = new maplibregl.Marker({ color: "#dc6e86" }).setLngLat([selectedMapPoint.longitude, selectedMapPoint.latitude]).addTo(lovePlacesMap);
+    });
+    lovePlacesMap.on("error", event => {
+        console.warn("Não foi possível carregar o globo de satélite.", event.error);
+        if (!lovePlacesMapReady) {
+            document.getElementById("mapLoading").hidden = false;
+            document.getElementById("mapLoading").textContent = "O globo não carregou. Confira sua conexão e atualize a página.";
+        }
+    });
+    lovePlacesMap.once("load", () => {
+        lovePlacesMapReady = true;
+        document.getElementById("mapLoading").hidden = true;
+        renderPlaces();
+    });
+}
+
+window.addEventListener("maplibre-ready", initializeLovePlacesMap, { once: true });
+if (window.maplibregl) initializeLovePlacesMap();
+document.getElementById("mapGoTaubate").addEventListener("click", () => {
+    selectedMapPoint = taubateStartingPoint;
+    document.getElementById("placeName").value = "Taubaté, São Paulo, Brasil";
+    document.getElementById("placeCoordinates").textContent = "Ponto inicial selecionado em Taubaté, São Paulo. Você pode mudar o ponto tocando no globo.";
+    lovePlacesMap?.flyTo({ center: [taubateStartingPoint.longitude, taubateStartingPoint.latitude], zoom: 9, essential: true });
+    if (selectedPointMarker) selectedPointMarker.remove(); selectedPointMarker = null;
+    if (lovePlacesMapReady) renderPlaces();
+});
+
+const mapFullscreenButton = document.getElementById("mapFullscreenButton");
+const loveMapContainer = document.getElementById("loveMap");
+function updateMapFullscreenState() {
+    const active = document.fullscreenElement === loveMapContainer || loveMapContainer.classList.contains("is-fullscreen");
+    mapFullscreenButton.textContent = active ? "× Sair da tela cheia" : "⛶ Tela cheia";
+    mapFullscreenButton.setAttribute("aria-pressed", String(active));
+    document.body.classList.toggle("map-fullscreen-open", active);
+    window.setTimeout(() => lovePlacesMap?.resize(), 80);
+}
+mapFullscreenButton.addEventListener("click", async () => {
+    if (document.fullscreenElement === loveMapContainer || loveMapContainer.classList.contains("is-fullscreen")) {
+        if (document.fullscreenElement) await document.exitFullscreen?.();
+        else loveMapContainer.classList.remove("is-fullscreen");
+        updateMapFullscreenState();
+        return;
+    }
+    if (loveMapContainer.requestFullscreen) {
+        try { await loveMapContainer.requestFullscreen(); }
+        catch (_) { loveMapContainer.classList.add("is-fullscreen"); }
+    } else loveMapContainer.classList.add("is-fullscreen");
+    updateMapFullscreenState();
+});
+document.addEventListener("fullscreenchange", updateMapFullscreenState);
+
+const addressSearchCacheKey = "loveChronicleAddressSearchCache";
+let lastAddressSearchAt = 0;
+document.getElementById("searchPlaceAddress").addEventListener("click", async () => {
+    const query = document.getElementById("placeAddress").value.trim();
+    const status = document.getElementById("addressSearchStatus");
+    const resultsWrap = document.getElementById("addressResultsWrap");
+    const resultsSelect = document.getElementById("addressResults");
+    if (!query) { status.textContent = "Digite uma cidade ou lugar para buscar."; return; }
+    const button = document.getElementById("searchPlaceAddress");
+    button.disabled = true; status.textContent = "Buscando opções…"; resultsWrap.hidden = true;
+    try {
+        let cache = {};
+        try { cache = JSON.parse(localStorage.getItem(addressSearchCacheKey) || "{}"); } catch (_) {}
+        const cacheKey = query.toLocaleLowerCase("pt-BR");
+        let found = cache[cacheKey];
+        if (!found) {
+            const wait = Math.max(0, 1100 - (Date.now() - lastAddressSearchAt));
+            if (wait) await new Promise(resolve => window.setTimeout(resolve, wait));
+            lastAddressSearchAt = Date.now();
+            const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(query)}`;
+            const response = await fetch(url, { headers: { Accept: "application/json" } });
+            if (!response.ok) throw new Error("Busca indisponível");
+            found = await response.json();
+            cache[cacheKey] = found;
+            try { localStorage.setItem(addressSearchCacheKey, JSON.stringify(cache)); } catch (_) {}
+        }
+        if (!found.length) { status.textContent = "Nenhum resultado encontrado. Tente outra forma de escrever o local."; return; }
+        resultsSelect.replaceChildren();
+        found.forEach((item, index) => {
+            const option = document.createElement("option"); option.value = String(index); option.textContent = item.display_name; resultsSelect.append(option);
+        });
+        resultsSelect.onchange = () => {
+            const item = found[Number(resultsSelect.value)];
+            if (!item) return;
+            selectedMapPoint = { longitude: Number(item.lon), latitude: Number(item.lat) };
+            document.getElementById("placeName").value = item.display_name.split(",").slice(0, 3).join(",");
+            document.getElementById("placeCoordinates").textContent = `Local selecionado: ${item.display_name}. O ponto foi movido no globo.`;
+            if (taubateDefaultMarker) { taubateDefaultMarker.remove(); taubateDefaultMarker = null; }
+            if (selectedPointMarker) selectedPointMarker.remove();
+            selectedPointMarker = new window.maplibregl.Marker({ color: "#dc6e86" }).setLngLat([selectedMapPoint.longitude, selectedMapPoint.latitude]).addTo(lovePlacesMap);
+            lovePlacesMap.flyTo({ center: [selectedMapPoint.longitude, selectedMapPoint.latitude], zoom: Math.max(lovePlacesMap.getZoom(), 9), essential: true });
+        };
+        resultsWrap.hidden = false;
+        resultsSelect.dispatchEvent(new Event("change"));
+        status.textContent = "Escolha uma opção para mover o ponto. © OpenStreetMap contributors.";
+    } catch (_) {
+        status.textContent = "Não foi possível buscar agora. Você ainda pode tocar no globo para escolher o ponto.";
+    } finally { button.disabled = false; }
+});
+
+function savePlanLocally(kind) {
+    try { localStorage.setItem(plansStorageKeys[kind], JSON.stringify(planData[kind])); } catch (_) {}
+}
+
+function planDateLabel(date) {
+    if (!date) return "";
+    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric", timeZone: "UTC" })
+        .format(new Date(`${date}T00:00:00Z`));
+}
+
+function renderLetters() {
+    document.getElementById("letterPermissions").hidden = !galleryAdminIsAllowed;
+    const container = document.getElementById("lettersList");
+    container.replaceChildren();
+    const letters = [...planData.letters].sort((a, b) => String(a.open_on).localeCompare(String(b.open_on)));
+    if (!letters.length) {
+        container.innerHTML = '<p class="empty-plan-state">A primeira cartinha de vocês pode começar aqui 💌</p>';
+        return;
+    }
+    letters.forEach(letter => {
+        const card = document.createElement("button");
+        card.type = "button";
+        const isOpen = !letter.open_on || letter.open_on <= todayISO();
+        card.className = `letter-card letter-card-button${isOpen ? " is-open" : ""}`;
+        const content = document.createElement("span"); content.className = "letter-card-content";
+        const title = document.createElement("strong");
+        title.textContent = letter.title;
+        const meta = document.createElement("span");
+        meta.className = "letter-meta";
+        meta.textContent = `${letter.author || "Nós dois"} · ${isOpen ? "Toque para abrir" : `Abre em ${planDateLabel(letter.open_on)}`}`;
+        const icon = document.createElement("span"); icon.className = "letter-card-icon"; icon.textContent = isOpen ? "💌" : "🔒";
+        content.append(title, meta);
+        card.append(content, icon);
+        card.addEventListener("click", () => openLetterDetail(letter.id));
+        container.append(card);
+    });
+}
+
+function openLetterDetail(letterId) {
+    const letter = planData.letters.find(item => String(item.id) === String(letterId));
+    if (!letter) return;
+    activeLetterDetail = letter;
+    const isOpen = !letter.open_on || letter.open_on <= todayISO();
+    document.getElementById("letterDetailTitle").textContent = letter.title;
+    document.getElementById("letterDetailMeta").textContent = `${letter.author || "Nós dois"} · Criada em ${planDateLabel(String(letter.created_at || "").slice(0, 10))}${letter.open_on ? ` · ${isOpen ? "Aberta em" : "Abre em"} ${planDateLabel(letter.open_on)}` : ""}`;
+    document.getElementById("letterDetailBody").textContent = isOpen ? letter.message : `🔒 Esta cartinha fica fechada até ${planDateLabel(letter.open_on)}.`;
+    const actions = document.getElementById("letterDetailActions");
+    actions.replaceChildren();
+    if (galleryAdminIsAllowed && letter.editable !== false && isOpen) {
+        const edit = document.createElement("button"); edit.type = "button"; edit.className = "secondary-plan-button"; edit.textContent = "Editar cartinha";
+        edit.addEventListener("click", () => startLetterEdit(letter)); actions.append(edit);
+    }
+    if (galleryAdminIsAllowed && letter.deletable !== false) {
+        const remove = document.createElement("button"); remove.type = "button"; remove.className = "plan-delete"; remove.textContent = "Apagar cartinha";
+        remove.addEventListener("click", () => deleteLetter(letter)); actions.append(remove);
+    }
+    const modal = document.getElementById("letterDetailModal");
+    modal.hidden = false; document.body.classList.add("letter-detail-open");
+    document.getElementById("closeLetterDetail").focus({ preventScroll: true });
+}
+
+function closeLetterDetail() {
+    document.getElementById("letterDetailModal").hidden = true;
+    document.body.classList.remove("letter-detail-open");
+    activeLetterDetail = null;
+}
+
+function startLetterEdit(letter) {
+    if (!galleryAdminIsAllowed || letter.editable === false) return;
+    editingLetterId = letter.id;
+    document.getElementById("letterTitle").value = letter.title;
+    document.getElementById("letterMessage").value = letter.message;
+    document.getElementById("letterOpenDate").value = letter.open_on || "";
+    document.getElementById("letterAuthor").value = letter.author || "Nós dois";
+    document.getElementById("letterCanEdit").checked = letter.editable !== false;
+    document.getElementById("letterCanDelete").checked = letter.deletable !== false;
+    document.getElementById("saveLetterButton").textContent = "SALVAR ALTERAÇÕES";
+    document.getElementById("cancelLetterEdit").hidden = false;
+    document.getElementById("lettersPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    closeLetterDetail();
+    document.getElementById("letterTitle").focus({ preventScroll: true });
+}
+
+async function deleteLetter(letter) {
+    if (!galleryAdminIsAllowed || letter.deletable === false) return;
+    if (!window.confirm(`Apagar a cartinha “${letter.title}”?`)) return;
+    const { error } = await supabaseClient.from("love_letters").delete().eq("id", letter.id);
+    if (error) { document.getElementById("letterStatus").textContent = "Não foi possível apagar a cartinha. Confira o SQL do Supabase."; return; }
+    planData.letters = planData.letters.filter(item => String(item.id) !== String(letter.id));
+    savePlanLocally("letters"); renderLetters(); closeLetterDetail();
+}
+
+function renderCapsules() {
+    const container = document.getElementById("capsulesList");
+    const gate = document.getElementById("capsuleAdminGate");
+    const form = document.getElementById("capsuleForm");
+    const isAdmin = Boolean(galleryAdminIsAllowed);
+    gate.hidden = isAdmin;
+    form.hidden = !isAdmin;
+    container.replaceChildren();
+    if (!planData.capsules.length) {
+        container.innerHTML = '<p class="empty-plan-state">Nenhuma cápsula foi guardada ainda.</p>';
+        return;
+    }
+    [...planData.capsules].sort((a, b) => String(a.open_on).localeCompare(String(b.open_on))).forEach(capsule => {
+        const isOpen = capsule.open_on <= todayISO();
+        const card = document.createElement("article"); card.className = `letter-card capsule-card${isOpen ? " is-open" : ""}`;
+        const title = document.createElement("h4"); title.textContent = capsule.title;
+        const meta = document.createElement("span"); meta.className = "letter-meta";
+        meta.textContent = `${capsule.author || "Nós dois"} · ${isOpen ? `Pode ser aberta desde ${planDateLabel(capsule.open_on)}` : `Trancada até ${planDateLabel(capsule.open_on)}`}`;
+        const content = document.createElement("div"); content.className = "capsule-content";
+        if (!isAdmin || !isOpen) {
+            content.textContent = isOpen ? "🔒 Entre no modo administrador para ler esta cápsula." : "🔒 O que foi escrito continua guardado até a data escolhida.";
+        } else if (capsule.message) {
+            content.textContent = capsule.message;
+        } else {
+            content.textContent = "O texto não pôde ser carregado. Confira a conexão e as políticas do Supabase.";
+        }
+        card.append(title, meta, content);
+        if (isAdmin) {
+            const remove = document.createElement("button"); remove.type = "button"; remove.className = "plan-delete"; remove.textContent = "Apagar cápsula";
+            remove.addEventListener("click", () => deleteCapsule(capsule)); card.append(remove);
+        }
+        container.append(card);
+    });
+}
+
+async function deleteCapsule(capsule) {
+    if (!galleryAdminIsAllowed || !window.confirm(`Apagar a cápsula “${capsule.title}”?`)) return;
+    const { error } = await supabaseClient.from("love_capsules").delete().eq("id", capsule.id);
+    if (error) { document.getElementById("capsuleStatus").textContent = "Não foi possível apagar a cápsula. Confira o SQL do Supabase."; return; }
+    planData.capsules = planData.capsules.filter(item => String(item.id) !== String(capsule.id));
+    renderCapsules();
+}
+
+function startPlaceEdit(place) {
+    editingPlaceId = place.id;
+    document.getElementById("placeName").value = place.name;
+    document.getElementById("placeKind").value = place.kind;
+    document.getElementById("placeDate").value = place.visited_on || "";
+    document.getElementById("placePhoto").value = "";
+    document.getElementById("placePhotoName").textContent = "Nenhuma foto escolhida";
+    selectedMapPoint = { longitude: Number(place.longitude), latitude: Number(place.latitude) };
+    document.getElementById("placeCoordinates").textContent = `Editando ponto selecionado: ${selectedMapPoint.latitude}°, ${selectedMapPoint.longitude}°. Escolha uma nova foto se quiser substituir a atual.`;
+    document.getElementById("savePlaceButton").textContent = "SALVAR ALTERAÇÕES";
+    document.getElementById("cancelPlaceEdit").hidden = false;
+    if (selectedPointMarker) selectedPointMarker.remove();
+    selectedPointMarker = window.maplibregl && lovePlacesMap
+        ? new window.maplibregl.Marker({ color: "#dc6e86" }).setLngLat([selectedMapPoint.longitude, selectedMapPoint.latitude]).addTo(lovePlacesMap)
+        : null;
+    lovePlacesMap?.flyTo({ center: [selectedMapPoint.longitude, selectedMapPoint.latitude], zoom: 9, essential: true });
+    document.getElementById("placeForm").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function cancelPlaceEdit() {
+    editingPlaceId = null;
+    document.getElementById("placeForm").reset();
+    document.getElementById("placePhotoName").textContent = "Nenhuma foto escolhida";
+    document.getElementById("placeName").value = "Taubaté, São Paulo, Brasil";
+    document.getElementById("placeKind").value = "visited";
+    document.getElementById("savePlaceButton").textContent = "ADICIONAR AO MAPA";
+    document.getElementById("cancelPlaceEdit").hidden = true;
+    if (selectedPointMarker) selectedPointMarker.remove();
+    selectedPointMarker = null;
+    selectedMapPoint = taubateStartingPoint;
+    document.getElementById("placeCoordinates").textContent = "Ponto inicial selecionado em Taubaté, São Paulo. Você pode mudar o ponto tocando no globo.";
+    if (lovePlacesMapReady) renderPlaces();
+}
+
+function renderPlaces() {
+    const list = document.getElementById("placesList");
+    list.replaceChildren();
+    renderPlaceMarkers();
+    if (!planData.places.length) list.innerHTML = '<p class="empty-plan-state">Os lugares especiais de vocês vão aparecer aqui.</p>';
+    planData.places.forEach(place => {
+        const card = document.createElement("article");
+        card.className = `place-card${place.kind === "dream" ? " dream" : ""}`;
+        const icon = document.createElement("span"); icon.className = "place-card-icon"; icon.textContent = place.kind === "dream" ? "✦" : "♥";
+        const content = document.createElement("div"); content.className = "place-card-content";
+        if (place.photo_url) { const photo = document.createElement("img"); photo.className = "place-card-photo"; photo.src = place.photo_url; photo.alt = `Abrir foto de ${place.name}`; photo.loading = "lazy"; photo.addEventListener("click", () => openMedia(place.photo_url, `Foto de ${place.name}`, "image")); card.append(photo); }
+        const title = document.createElement("h4"); title.textContent = place.name;
+        const meta = document.createElement("span"); meta.className = "place-meta";
+        meta.textContent = `${place.kind === "dream" ? "Queremos conhecer" : "Já visitamos"}${place.visited_on ? ` · ${planDateLabel(place.visited_on)}` : ""}${place.note ? ` · ${place.note}` : ""}`;
+        content.append(title, meta);
+        const remove = document.createElement("button"); remove.type = "button"; remove.className = "plan-delete"; remove.textContent = "×"; remove.setAttribute("aria-label", `Apagar ${place.name}`);
+        remove.addEventListener("click", () => removePlanItem("places", place.id));
+        const edit = document.createElement("button"); edit.type = "button"; edit.className = "plan-edit"; edit.textContent = "Editar"; edit.setAttribute("aria-label", `Editar ${place.name}`);
+        edit.addEventListener("click", () => startPlaceEdit(place));
+        card.append(icon, content, edit, remove); list.append(card);
+        card.addEventListener("click", event => {
+            if (event.target.closest("button, img")) return;
+            lovePlacesMap?.flyTo({ center: [Number(place.longitude), Number(place.latitude)], zoom: 9, essential: true });
+        });
+    });
+}
+
+function renderPlaceMarkers() {
+    if (!lovePlacesMapReady || !lovePlacesMap || !window.maplibregl) return;
+    lovePlaceMarkers.forEach(marker => marker.remove()); lovePlaceMarkers = [];
+    const taubateIsSaved = planData.places.some(place => Math.abs(Number(place.latitude) - taubateStartingPoint.latitude) < 0.02 && Math.abs(Number(place.longitude) - taubateStartingPoint.longitude) < 0.02);
+    if (taubateIsSaved && taubateDefaultMarker) { taubateDefaultMarker.remove(); taubateDefaultMarker = null; }
+    if (!taubateIsSaved && !taubateDefaultMarker) {
+        const pin = document.createElement("span"); pin.className = "maplibre-place-marker map-marker-placeholder"; pin.textContent = "⌖";
+        const popupContent = document.createElement("div"); popupContent.className = "place-popup";
+        const title = document.createElement("strong"); title.textContent = "Taubaté, São Paulo";
+        const note = document.createElement("span"); note.textContent = "Ponto inicial — adicione a foto de vocês pelo formulário."; popupContent.append(title, note);
+        taubateDefaultMarker = new window.maplibregl.Marker({ element: pin, anchor: "center" }).setLngLat([taubateStartingPoint.longitude, taubateStartingPoint.latitude]).setPopup(new window.maplibregl.Popup({ offset: 18 }).setDOMContent(popupContent)).addTo(lovePlacesMap);
+    }
+    const places = planData.places.filter(place => Number.isFinite(Number(place.latitude)) && Number.isFinite(Number(place.longitude)));
+    const projected = places.map(place => ({ place, point: lovePlacesMap.project([Number(place.longitude), Number(place.latitude)]) }))
+        .filter(item => item.point.x >= -80 && item.point.x <= loveMapContainer.clientWidth + 80 && item.point.y >= -80 && item.point.y <= loveMapContainer.clientHeight + 80);
+    const threshold = Math.max(30, 142 - lovePlacesMap.getZoom() * 11);
+    const groups = [];
+    projected.forEach(item => {
+        let group = groups.find(candidate => Math.hypot(candidate.x / candidate.count - item.point.x, candidate.y / candidate.count - item.point.y) < threshold);
+        if (!group) { group = { items: [], x: 0, y: 0, count: 0 }; groups.push(group); }
+        group.items.push(item.place); group.x += item.point.x; group.y += item.point.y; group.count++;
+    });
+    groups.forEach(group => {
+        const primary = group.items[0];
+        const el = document.createElement("button"); el.type = "button";
+        el.className = `maplibre-place-marker${group.count > 1 ? " is-cluster" : ""}${primary.kind === "dream" ? " dream" : ""}`;
+        el.setAttribute("aria-label", group.count > 1 ? `${group.count} lugares agrupados no mapa` : `Ver ${primary.name} no mapa`);
+        group.items.slice(0, 3).forEach((place, index) => {
+            if (!place.photo_url) return;
+            const thumb = document.createElement("img"); thumb.src = place.photo_url; thumb.alt = ""; thumb.loading = "lazy"; thumb.className = `map-marker-thumb thumb-${index}`; el.append(thumb);
+        });
+        if (group.items.every(place => !place.photo_url)) { const fallback = document.createElement("span"); fallback.className = "map-marker-fallback"; fallback.textContent = primary.kind === "dream" ? "✦" : "⌖"; el.append(fallback); }
+        if (group.count > 1) { const count = document.createElement("span"); count.className = "map-cluster-count"; count.textContent = String(group.count); el.append(count); }
+        const center = [group.items.reduce((sum, place) => sum + Number(place.longitude), 0) / group.count, group.items.reduce((sum, place) => sum + Number(place.latitude), 0) / group.count];
+        let popup;
+        if (group.count === 1) {
+            const popupContent = document.createElement("div"); popupContent.className = "place-popup";
+            if (primary.photo_url) { const photo = document.createElement("img"); photo.src = primary.photo_url; photo.alt = `Foto de ${primary.name}`; photo.loading = "lazy"; photo.addEventListener("click", () => openMedia(primary.photo_url, `Foto de ${primary.name}`, "image")); popupContent.append(photo); }
+            const title = document.createElement("strong"); title.textContent = primary.name;
+            const meta = document.createElement("span"); meta.textContent = `${primary.kind === "dream" ? "Queremos conhecer" : "Já fomos"}${primary.visited_on ? ` · ${planDateLabel(primary.visited_on)}` : ""}`; popupContent.append(title, meta);
+            if (primary.note) { const note = document.createElement("p"); note.textContent = primary.note; popupContent.append(note); }
+            popup = new window.maplibregl.Popup({ offset: 22, closeButton: true }).setDOMContent(popupContent);
+        } else if (lovePlacesMap.getZoom() >= 13) {
+            const popupContent = document.createElement("div"); popupContent.className = "place-popup";
+            group.items.forEach(place => { const row = document.createElement("button"); row.type = "button"; row.className = "cluster-place-row"; row.textContent = `${place.photo_url ? "▣ " : "⌖ "}${place.name}`; row.addEventListener("click", () => { lovePlacesMap.flyTo({ center: [Number(place.longitude), Number(place.latitude)], zoom: 15 }); }); popupContent.append(row); });
+            popup = new window.maplibregl.Popup({ offset: 22, closeButton: true }).setDOMContent(popupContent);
+        }
+        const marker = new window.maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(center);
+        if (popup) marker.setPopup(popup);
+        marker.addTo(lovePlacesMap);
+        el.addEventListener("click", event => { if (group.count > 1) { event.stopPropagation(); if (lovePlacesMap.getZoom() < 13) lovePlacesMap.easeTo({ center, zoom: Math.min(13, lovePlacesMap.getZoom() + 2.5), duration: 550 }); } });
+        lovePlaceMarkers.push(marker);
+    });
+}
+
+function renderChecklist() {
+    const list = document.getElementById("checklistItems");
+    list.replaceChildren();
+    planData.checklist.forEach(item => {
+        const row = document.createElement("li"); row.className = `checklist-item${item.done ? " is-done" : ""}`;
+        const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = Boolean(item.done); checkbox.setAttribute("aria-label", `Marcar ${item.text} como ${item.done ? "não concluído" : "concluído"}`);
+        checkbox.addEventListener("change", () => updateChecklistItem(item.id, checkbox.checked));
+        const label = document.createElement("span"); label.textContent = item.text;
+        const remove = document.createElement("button"); remove.type = "button"; remove.className = "plan-delete"; remove.textContent = "×"; remove.setAttribute("aria-label", `Apagar ${item.text}`);
+        remove.addEventListener("click", () => removePlanItem("checklist", item.id));
+        row.append(checkbox, label, remove); list.append(row);
+    });
+    const done = planData.checklist.filter(item => item.done).length;
+    const total = planData.checklist.length;
+    document.getElementById("checklistProgress").textContent = `${done} de ${total} ${total === 1 ? "concluído" : "concluídos"}`;
+    document.getElementById("checklistProgressBar").style.width = `${total ? (done / total) * 100 : 0}%`;
+}
+
+function renderCouplePlans() { renderLetters(); renderCapsules(); renderPlaces(); renderChecklist(); }
+
+async function persistPlanItem(kind, item) {
+    planData[kind].push(item); savePlanLocally(kind); renderCouplePlans();
+    if (!supabaseClient) return false;
+    const table = { letters: "love_letters", places: "love_places", checklist: "love_checklist" }[kind];
+    const { error } = await supabaseClient.from(table).insert(item);
+    if (error) {
+        console.error(`Não foi possível sincronizar ${table}.`, error);
+        return false;
+    }
+    return true;
+}
+
+async function removePlanItem(kind, id) {
+    planData[kind] = planData[kind].filter(item => String(item.id) !== String(id));
+    savePlanLocally(kind); renderCouplePlans();
+    if (supabaseClient) {
+        const table = { letters: "love_letters", places: "love_places", checklist: "love_checklist" }[kind];
+        const { error } = await supabaseClient.from(table).delete().eq("id", id);
+        if (error) console.error(`Não foi possível remover o item de ${table}.`, error);
+    }
+}
+
+async function updateChecklistItem(id, done) {
+    const item = planData.checklist.find(entry => String(entry.id) === String(id));
+    if (!item) return;
+    item.done = done; savePlanLocally("checklist"); renderChecklist();
+    if (supabaseClient) {
+        const { error } = await supabaseClient.from("love_checklist").update({ done }).eq("id", id);
+        if (error) console.error("Não foi possível sincronizar a checklist.", error);
+    }
+}
+
+async function loadCouplePlans() {
+    if (!supabaseClient) { renderCouplePlans(); return; }
+    const tables = { letters: "love_letters", places: "love_places", checklist: "love_checklist", capsules: "love_capsules" };
+    await Promise.all(Object.entries(tables).map(async ([kind, table]) => {
+        const fields = kind === "capsules" ? "id, title, open_on, author, created_at" : "*";
+        const { data, error } = await supabaseClient.from(table).select(fields).order("created_at", { ascending: true });
+        if (error) { console.warn(`Não foi possível carregar ${table}; mantendo os dados locais.`, error); return; }
+        if (kind === "capsules") planData.capsules = data || [];
+        else { planData[kind] = data || []; savePlanLocally(kind); }
+    }));
+    if (galleryAdminIsAllowed) {
+        const dueIds = planData.capsules.filter(item => item.open_on <= todayISO()).map(item => item.id);
+        if (dueIds.length) {
+            const { data: contents, error } = await supabaseClient.from("love_capsule_contents").select("capsule_id, message").in("capsule_id", dueIds);
+            if (error) console.warn("O Supabase não liberou o conteúdo das cápsulas.", error);
+            else {
+                const messageById = new Map((contents || []).map(item => [String(item.capsule_id), item.message]));
+                planData.capsules.forEach(item => { item.message = messageById.get(String(item.id)) || ""; });
+            }
+        }
+    }
+    renderCouplePlans();
+}
+
+document.getElementById("letterForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const status = document.getElementById("letterStatus");
+    const openOn = document.getElementById("letterOpenDate").value || null;
+    const letter = {
+        title: document.getElementById("letterTitle").value.trim(),
+        message: document.getElementById("letterMessage").value.trim(), open_on: openOn,
+        author: document.getElementById("letterAuthor").value,
+        editable: galleryAdminIsAllowed ? document.getElementById("letterCanEdit").checked : true,
+        deletable: galleryAdminIsAllowed ? document.getElementById("letterCanDelete").checked : true
+    };
+    if (!letter.title || !letter.message) return;
+    if (editingLetterId) {
+        if (!galleryAdminIsAllowed) return;
+        const { data, error } = await supabaseClient.from("love_letters").update(letter).eq("id", editingLetterId).select("*").single();
+        if (error) { status.textContent = "Não foi possível salvar. Esta cartinha pode estar marcada como não editável."; return; }
+        planData.letters = planData.letters.map(item => String(item.id) === String(editingLetterId) ? data : item);
+        status.textContent = "Cartinha atualizada.";
+    } else {
+        const id = crypto.randomUUID();
+        const fullLetter = { id, ...letter, created_at: new Date().toISOString() };
+        if (supabaseClient) {
+            const { data, error } = await supabaseClient.from("love_letters").insert(fullLetter).select("*").single();
+            if (error) { status.textContent = "Não foi possível guardar a cartinha. Confira a conexão e o SQL do Supabase."; return; }
+            planData.letters.push(data);
+            status.textContent = "Cartinha guardada para vocês 💌";
+        } else {
+            planData.letters.push(fullLetter); status.textContent = "Cartinha guardada neste navegador.";
+        }
+    }
+    savePlanLocally("letters"); renderLetters();
+    document.getElementById("letterForm").reset(); editingLetterId = null;
+    document.getElementById("saveLetterButton").textContent = "GUARDAR CARTINHA ♥";
+    document.getElementById("cancelLetterEdit").hidden = true;
+    document.getElementById("letterOpenDate").min = todayISO();
+});
+
+document.getElementById("cancelLetterEdit").addEventListener("click", () => {
+    editingLetterId = null; document.getElementById("letterForm").reset();
+    document.getElementById("saveLetterButton").textContent = "GUARDAR CARTINHA ♥";
+    document.getElementById("cancelLetterEdit").hidden = true;
+});
+
+document.getElementById("lettersTab").addEventListener("click", () => setMessagePanel("letters"));
+document.getElementById("capsulesTab").addEventListener("click", () => setMessagePanel("capsules"));
+function setMessagePanel(panel) {
+    const isLetters = panel === "letters";
+    document.getElementById("lettersTab").classList.toggle("active", isLetters);
+    document.getElementById("capsulesTab").classList.toggle("active", !isLetters);
+    document.getElementById("lettersTab").setAttribute("aria-selected", String(isLetters));
+    document.getElementById("capsulesTab").setAttribute("aria-selected", String(!isLetters));
+    document.getElementById("lettersPanel").hidden = !isLetters;
+    document.getElementById("capsulesPanel").hidden = isLetters;
+}
+
+document.querySelectorAll("[data-capsule-years]").forEach(button => button.addEventListener("click", () => {
+    const date = new Date(); date.setFullYear(date.getFullYear() + Number(button.dataset.capsuleYears));
+    document.getElementById("capsuleOpenDate").value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}));
+
+document.getElementById("capsuleForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const status = document.getElementById("capsuleStatus");
+    if (!galleryAdminIsAllowed || !supabaseClient) { status.textContent = "Entre no modo administrador para guardar uma cápsula."; return; }
+    const openOn = document.getElementById("capsuleOpenDate").value;
+    if (openOn <= todayISO()) { status.textContent = "A cápsula precisa ser marcada para uma data futura."; return; }
+    const title = document.getElementById("capsuleTitle").value.trim();
+    const message = document.getElementById("capsuleMessage").value.trim();
+    if (!title || !message) return;
+    const metadata = { id: crypto.randomUUID(), title, open_on: openOn, author: document.getElementById("capsuleAuthor").value, created_at: new Date().toISOString() };
+    const { error: metadataError } = await supabaseClient.from("love_capsules").insert(metadata);
+    if (metadataError) { status.textContent = "Não foi possível criar a cápsula. Confira o SQL do Supabase."; return; }
+    const { error: contentError } = await supabaseClient.from("love_capsule_contents").insert({ capsule_id: metadata.id, message });
+    if (contentError) {
+        await supabaseClient.from("love_capsules").delete().eq("id", metadata.id);
+        status.textContent = "Não foi possível selar o texto. Confira as políticas de cápsula no Supabase."; return;
+    }
+    planData.capsules.push(metadata); renderCapsules();
+    document.getElementById("capsuleForm").reset(); status.textContent = "Cápsula selada. O texto ficará protegido até a data escolhida. 🔒";
+});
+
+document.getElementById("goToAdminLogin").addEventListener("click", () => {
+    openPage("photos");
+    window.setTimeout(() => document.getElementById("galleryAdminEmail").focus({ preventScroll: true }), 250);
+});
+
+document.getElementById("closeLetterDetail").addEventListener("click", closeLetterDetail);
+document.getElementById("letterDetailModal").addEventListener("click", event => {
+    if (event.target.id === "letterDetailModal") closeLetterDetail();
+});
+document.addEventListener("keydown", event => { if (event.key === "Escape" && !document.getElementById("letterDetailModal").hidden) closeLetterDetail(); });
+
+document.getElementById("placePhoto").addEventListener("change", event => {
+    const file = event.currentTarget.files?.[0];
+    document.getElementById("placePhotoName").textContent = file ? file.name : "Nenhuma foto escolhida";
+});
+
+document.getElementById("placeForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const status = document.getElementById("placeStatus");
+    if (!selectedMapPoint) { status.textContent = "Toque no globo para escolher onde fica o lugar."; return; }
+    const photoInput = document.getElementById("placePhoto");
+    const photoFile = photoInput.files[0];
+    const placeName = document.getElementById("placeName").value.trim();
+    if (!placeName) { status.textContent = "Dê um nome para este lugar."; return; }
+    if (photoFile && (!photoFile.type.startsWith("image/") || photoFile.size > 25 * 1024 * 1024)) {
+        status.textContent = "Escolha uma foto de até 25 MB."; return;
+    }
+    let photoUrl = null;
+    let photoPath = null;
+    if (photoFile) {
+        if (!supabaseClient) { status.textContent = "Para guardar a foto e vê-la em outros aparelhos, configure o Supabase primeiro."; return; }
+        status.textContent = "Enviando foto…";
+        const safeName = photoFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        photoPath = `places/${crypto.randomUUID()}-${safeName}`;
+        const { error: photoError } = await supabaseClient.storage.from("memories").upload(photoPath, photoFile, { contentType: photoFile.type, upsert: false });
+        if (photoError) { console.error("Não foi possível enviar a foto do lugar.", photoError); status.textContent = "Não foi possível enviar a foto. Confira as permissões do Storage no Supabase."; return; }
+        photoUrl = supabaseClient.storage.from("memories").getPublicUrl(photoPath).data.publicUrl;
+    } else if (editingPlaceId) {
+        const existingPlace = planData.places.find(item => String(item.id) === String(editingPlaceId));
+        photoUrl = existingPlace?.photo_url || null;
+        photoPath = existingPlace?.photo_path || null;
+    }
+    const currentPlace = planData.places.find(item => String(item.id) === String(editingPlaceId));
+    const place = {
+        id: editingPlaceId || crypto.randomUUID(), name: placeName, kind: document.getElementById("placeKind").value,
+        note: currentPlace?.note || "", visited_on: document.getElementById("placeDate").value || null,
+        photo_url: photoUrl, photo_path: photoPath, ...selectedMapPoint,
+        created_at: planData.places.find(item => String(item.id) === String(editingPlaceId))?.created_at || new Date().toISOString()
+    };
+    let synced = false;
+    if (editingPlaceId) {
+        if (supabaseClient) {
+            const { data, error } = await supabaseClient.from("love_places").update(place).eq("id", editingPlaceId).select("*").single();
+            if (error) { status.textContent = "Não foi possível atualizar este lugar. Confira a conexão e o SQL do Supabase."; return; }
+            planData.places = planData.places.map(item => String(item.id) === String(editingPlaceId) ? data : item);
+            synced = true;
+        } else {
+            planData.places = planData.places.map(item => String(item.id) === String(editingPlaceId) ? place : item);
+        }
+        savePlanLocally("places"); renderPlaces();
+    } else {
+        synced = await persistPlanItem("places", place);
+    }
+    const wasEditing = Boolean(editingPlaceId);
+    editingPlaceId = null;
+    document.getElementById("placeForm").reset(); selectedMapPoint = taubateStartingPoint;
+    document.getElementById("placePhotoName").textContent = "Nenhuma foto escolhida";
+    document.getElementById("placeName").value = "Taubaté, São Paulo, Brasil";
+    document.getElementById("placeKind").value = "visited";
+    document.getElementById("savePlaceButton").textContent = "ADICIONAR AO MAPA";
+    document.getElementById("cancelPlaceEdit").hidden = true;
+    document.getElementById("placeCoordinates").textContent = "Ponto inicial selecionado em Taubaté, São Paulo. Você pode mudar o ponto tocando no globo.";
+    if (selectedPointMarker) selectedPointMarker.remove(); selectedPointMarker = null;
+    lovePlacesMap?.flyTo({ center: [taubateStartingPoint.longitude, taubateStartingPoint.latitude], zoom: 3.5 });
+    status.textContent = synced ? (wasEditing ? "Lugar atualizado para vocês dois!" : "Lugar e foto guardados para vocês dois!") : (wasEditing ? "Lugar atualizado neste navegador." : "Lugar guardado neste navegador. Configure o SQL do Supabase para sincronizar entre aparelhos.");
+});
+
+document.getElementById("cancelPlaceEdit").addEventListener("click", cancelPlaceEdit);
+
+document.getElementById("checklistForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const input = document.getElementById("checklistText");
+    const text = input.value.trim(); if (!text) return;
+    const synced = await persistPlanItem("checklist", { id: crypto.randomUUID(), text, done: false, created_at: new Date().toISOString() });
+    input.value = "";
+    input.setAttribute("aria-describedby", "checklistProgress");
+    if (!synced && supabaseClient) document.getElementById("checklistProgress").textContent += " · salvo neste navegador; SQL do Supabase pendente";
+});
+
+renderCouplePlans();
+
 function buildMemoryDots() {
     const container = document.getElementById("memoryDots");
     container.innerHTML = "";
@@ -442,8 +1109,10 @@ async function refreshGalleryAdminPermission() {
         if (!error) galleryAdminIsAllowed = data === true;
         else console.error("Não foi possível verificar a permissão administrativa.", error);
     }
+    if (!galleryAdminIsAllowed) planData.capsules.forEach(capsule => { delete capsule.message; });
     updateGalleryAdminUI();
     renderNews();
+    await loadCouplePlans();
 }
 
 async function loginGalleryAdmin() {
@@ -480,7 +1149,9 @@ async function logoutGalleryAdmin() {
     }
     galleryAdminUser = null;
     galleryAdminIsAllowed = false;
+    planData.capsules.forEach(capsule => { delete capsule.message; });
     updateGalleryAdminUI();
+    renderCouplePlans();
 }
 
 async function deleteGalleryMemory(memoryId) {
@@ -595,6 +1266,7 @@ async function initializeSupabase() {
         console.error("Não foi possível carregar as notícias salvas.", newsError);
         document.getElementById("newsStatus").textContent = "Não foi possível carregar as notícias salvas. Execute o SQL atualizado do Supabase.";
     }
+    await loadCouplePlans();
     supabaseClient.auth.onAuthStateChange((_event, session) => {
         galleryAdminUser = session?.user || null;
         galleryAdminIsAllowed = false;
@@ -728,6 +1400,8 @@ function openPage(pageName) {
     if (selectedButton) {
         selectedButton.classList.add("active");
     }
+
+    if (pageName === "our-plans") window.setTimeout(() => lovePlacesMap?.resize(), 180);
 
     window.scrollTo({
         top: 0,
