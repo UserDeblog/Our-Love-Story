@@ -83,15 +83,70 @@ enterLoveSiteButton.addEventListener("click", () => {
 
 const backgroundTracks = [];
 const musicFolderApi = "https://api.github.com/repos/UserDeblog/Our-Love-Story/contents/music/music?ref=master";
+const MUSIC_PAGE_SIZE = 8;
+const MUSIC_PLAYLISTS = ["Animadas", "Calmas", "Piano", "Românticas"];
 
 const backgroundMusic = document.getElementById("backgroundMusic");
+backgroundMusic.crossOrigin = "anonymous";
 const musicTrackSelect = document.getElementById("musicTrackSelect");
+const musicPlaylistSelect = document.getElementById("musicPlaylistSelect");
+const musicPagination = document.getElementById("musicPagination");
 const musicPlayPause = document.getElementById("musicPlayPause");
 const musicStatus = document.getElementById("musicStatus");
 const musicMixer = document.getElementById("musicMixer");
 const musicMixerPanel = document.getElementById("musicMixerPanel");
 const musicMixerToggle = document.getElementById("musicMixerToggle");
 let currentTrackIndex = 0;
+let currentMusicPage = 1;
+let activePlaylist = "all";
+let musicAudioContext = null;
+let musicGainNode = null;
+let musicMediaSource = null;
+
+function getMusicVolume() {
+    return Number(document.getElementById("musicVolume").value);
+}
+
+function setupMusicVolume() {
+    if (musicGainNode) return true;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return false;
+
+    try {
+        musicAudioContext = new AudioContextClass();
+        musicMediaSource = musicAudioContext.createMediaElementSource(backgroundMusic);
+        musicGainNode = musicAudioContext.createGain();
+        musicGainNode.gain.value = getMusicVolume();
+        musicMediaSource.connect(musicGainNode);
+        musicGainNode.connect(musicAudioContext.destination);
+        return true;
+    } catch (error) {
+        console.warn("Controle de ganho de áudio indisponível neste navegador.", error);
+        musicAudioContext = null;
+        musicGainNode = null;
+        musicMediaSource = null;
+        return false;
+    }
+}
+
+function applyMusicVolume(value) {
+    const volume = Math.min(1, Math.max(0, Number(value)));
+    if (musicGainNode && musicAudioContext) {
+        musicGainNode.gain.setTargetAtTime(volume, musicAudioContext.currentTime, 0.015);
+    } else {
+        // Fallback para navegadores sem Web Audio.
+        backgroundMusic.volume = volume;
+    }
+}
+
+function setMusicPlaying(isPlaying) {
+    musicMixer.classList.toggle("is-playing", isPlaying);
+    musicPlayPause.innerHTML = isPlaying
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h3v12H8zM15 6h3v12h-3z"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 10 6-10 6V6Z"/></svg>';
+    musicPlayPause.setAttribute("aria-label", isPlaying ? "Pausar música" : "Tocar música");
+    musicPlayPause.title = isPlaying ? "Pausar música" : "Tocar música";
+}
 
 musicMixerToggle.addEventListener("click", () => {
     const isOpen = musicMixer.classList.toggle("is-open");
@@ -102,39 +157,83 @@ musicMixerToggle.addEventListener("click", () => {
     musicMixerPanel.setAttribute("aria-hidden", String(!isOpen));
 });
 
+document.getElementById("memoryFile")?.addEventListener("change", event => {
+    const file = event.currentTarget.files?.[0];
+    const fileName = document.getElementById("memoryFileName");
+    if (fileName) fileName.textContent = file?.name || "Nenhum arquivo escolhido";
+});
+
+function getVisiblePlaylistTracks() {
+    return activePlaylist === "all"
+        ? backgroundTracks
+        : backgroundTracks.filter(track => track.playlist === activePlaylist);
+}
+
+function renderMusicTrackOptions() {
+    const tracks = getVisiblePlaylistTracks();
+    const pageCount = Math.max(1, Math.ceil(tracks.length / MUSIC_PAGE_SIZE));
+    currentMusicPage = Math.min(Math.max(currentMusicPage, 1), pageCount);
+    const firstTrack = (currentMusicPage - 1) * MUSIC_PAGE_SIZE;
+    const pageTracks = tracks.slice(firstTrack, firstTrack + MUSIC_PAGE_SIZE);
+    musicTrackSelect.replaceChildren(...pageTracks.map((track, index) =>
+        new Option(track.title, String(firstTrack + index))));
+    musicTrackSelect.disabled = pageTracks.length === 0;
+    musicPagination.replaceChildren();
+    for (let page = 1; page <= pageCount; page++) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `music-page-button${page === currentMusicPage ? " active" : ""}`;
+        button.textContent = String(page);
+        button.setAttribute("aria-label", `Página ${page} das músicas`);
+        button.setAttribute("aria-current", page === currentMusicPage ? "page" : "false");
+        button.addEventListener("click", () => {
+            currentMusicPage = page;
+            renderMusicTrackOptions();
+            const firstIndex = (page - 1) * MUSIC_PAGE_SIZE;
+            if (currentTrackIndex >= firstIndex && currentTrackIndex < firstIndex + MUSIC_PAGE_SIZE) {
+                musicTrackSelect.value = String(currentTrackIndex);
+            } else {
+                musicTrackSelect.value = String(firstIndex);
+            }
+        });
+        musicPagination.append(button);
+    }
+    musicPagination.hidden = pageCount <= 1;
+}
+
 function loadBackgroundTrack(index, shouldPlay = false) {
-    if (!backgroundTracks.length) return;
-    currentTrackIndex = (index + backgroundTracks.length) % backgroundTracks.length;
+    const tracks = getVisiblePlaylistTracks();
+    if (!tracks.length) return;
+    currentTrackIndex = (index + tracks.length) % tracks.length;
+    const track = tracks[currentTrackIndex];
+    currentMusicPage = Math.floor(currentTrackIndex / MUSIC_PAGE_SIZE) + 1;
+    renderMusicTrackOptions();
     musicTrackSelect.value = String(currentTrackIndex);
-    const file = backgroundTracks[currentTrackIndex].file;
-    backgroundMusic.src = `music/music/${file.split("/").map(encodeURIComponent).join("/")}`;
+    backgroundMusic.src = track.url || `music/music/${track.file.split("/").map(encodeURIComponent).join("/")}`;
     backgroundMusic.load();
-    musicStatus.textContent = backgroundTracks[currentTrackIndex].title;
+    musicStatus.textContent = track.title;
     if (shouldPlay) playBackgroundMusic();
 }
 
 async function playBackgroundMusic() {
     if (!backgroundTracks.length) return;
     try {
+        if (setupMusicVolume() && musicAudioContext.state === "suspended") {
+            await musicAudioContext.resume();
+        }
         await backgroundMusic.play();
-        musicPlayPause.textContent = "❚❚";
-        musicPlayPause.setAttribute("aria-label", "Pausar música");
-        musicPlayPause.title = "Pausar música";
-        musicStatus.textContent = `Tocando: ${backgroundTracks[currentTrackIndex].title}`;
+        setMusicPlaying(true);
+        musicStatus.textContent = `Tocando: ${getVisiblePlaylistTracks()[currentTrackIndex]?.title || "Música"}`;
     } catch (error) {
-        musicPlayPause.textContent = "▶";
-        musicPlayPause.setAttribute("aria-label", "Tocar música");
-        musicPlayPause.title = "Tocar música";
+        setMusicPlaying(false);
         musicStatus.textContent = "Toque em play para começar";
     }
 }
 
 function pauseBackgroundMusic() {
     backgroundMusic.pause();
-    musicPlayPause.textContent = "▶";
-    musicPlayPause.setAttribute("aria-label", "Tocar música");
-    musicPlayPause.title = "Tocar música";
-    musicStatus.textContent = `Pausado: ${backgroundTracks[currentTrackIndex]?.title || "Música"}`;
+    setMusicPlaying(false);
+    musicStatus.textContent = `Pausado: ${getVisiblePlaylistTracks()[currentTrackIndex]?.title || "Música"}`;
 }
 
 document.getElementById("musicPrevious").addEventListener("click", () => {
@@ -146,30 +245,46 @@ document.getElementById("musicNext").addEventListener("click", () => {
 musicTrackSelect.addEventListener("change", () => {
     loadBackgroundTrack(Number(musicTrackSelect.value), true);
 });
+musicPlaylistSelect.addEventListener("change", () => {
+    activePlaylist = musicPlaylistSelect.value;
+    currentMusicPage = 1;
+    currentTrackIndex = 0;
+    renderMusicTrackOptions();
+    const tracks = getVisiblePlaylistTracks();
+    if (tracks.length) loadBackgroundTrack(0, !backgroundMusic.paused);
+    else {
+        backgroundMusic.pause();
+        setMusicPlaying(false);
+        musicStatus.textContent = "Adicione músicas a esta playlist";
+    }
+});
 musicPlayPause.addEventListener("click", () => {
     if (backgroundMusic.paused) playBackgroundMusic();
     else pauseBackgroundMusic();
 });
 document.getElementById("musicVolume").addEventListener("input", event => {
-    backgroundMusic.volume = Number(event.target.value);
+    applyMusicVolume(event.target.value);
     try { localStorage.setItem("loveChronicleMusicVolume", event.target.value); } catch (_) {}
 });
 backgroundMusic.addEventListener("ended", () => {
-    if (backgroundTracks.length) loadBackgroundTrack(currentTrackIndex + 1, true);
+    if (getVisiblePlaylistTracks().length) loadBackgroundTrack(currentTrackIndex + 1, true);
 });
 backgroundMusic.addEventListener("error", () => {
-    musicStatus.textContent = "Não foi possível carregar esta música";
+    const track = getVisiblePlaylistTracks()[currentTrackIndex];
+    musicStatus.textContent = `Não foi possível carregar: ${track?.title || "esta música"}`;
+    console.error("Falha ao carregar faixa de áudio.", track, backgroundMusic.error);
 });
 
 const savedMusicVolume = (() => {
     try { return localStorage.getItem("loveChronicleMusicVolume"); } catch (_) { return null; }
 })();
 if (savedMusicVolume !== null) document.getElementById("musicVolume").value = savedMusicVolume;
-backgroundMusic.volume = Number(document.getElementById("musicVolume").value);
+applyMusicVolume(getMusicVolume());
 
 async function loadBackgroundPlaylist() {
     musicStatus.textContent = "Carregando músicas da pasta…";
     musicTrackSelect.disabled = true;
+    musicPlaylistSelect.disabled = true;
     document.getElementById("musicPrevious").disabled = true;
     document.getElementById("musicNext").disabled = true;
     musicPlayPause.disabled = true;
@@ -178,25 +293,47 @@ async function loadBackgroundPlaylist() {
             headers: { Accept: "application/vnd.github+json" }
         });
         if (!response.ok) throw new Error(`GitHub API respondeu ${response.status}`);
-        const files = await response.json();
+        const rootEntries = await response.json();
         const audioExtensions = new Set(["mp3", "m4a", "ogg", "wav", "aac", "flac"]);
-        const tracks = files
-            .filter(file => file.type === "file" && audioExtensions.has(file.name.split(".").pop().toLowerCase()))
-            .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
-            .map(file => ({
-                file: file.name,
-                title: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").replace(/\b[a-z]/g, letter => letter.toUpperCase())
-            }));
-        if (!tracks.length) throw new Error("Nenhum arquivo de áudio foi encontrado na pasta music/music.");
-
-        backgroundTracks.push(...tracks);
-        musicTrackSelect.replaceChildren(...backgroundTracks.map((track, index) => {
-            const option = document.createElement("option");
-            option.value = String(index);
-            option.textContent = track.title;
-            return option;
+        const directories = rootEntries.filter(entry => entry.type === "dir");
+        backgroundTracks.push(...rootEntries
+            .filter(entry => entry.type === "file" && audioExtensions.has(entry.name.split(".").pop().toLowerCase()))
+            .map(file => ({ file: file.name, url: file.download_url, playlist: "Geral" })));
+        const directoryNames = [...new Set([...MUSIC_PLAYLISTS, ...directories.map(directory => directory.name)])];
+        const directoryResults = await Promise.all(directoryNames.map(async name => {
+            const existingDirectory = directories.find(directory => directory.name === name);
+            const directoryUrl = existingDirectory?.url
+                || `https://api.github.com/repos/UserDeblog/Our-Love-Story/contents/music/music/${encodeURIComponent(name)}?ref=master`;
+            try {
+                const directoryResponse = await fetch(directoryUrl, { headers: { Accept: "application/vnd.github+json" } });
+                if (!directoryResponse.ok) return { name, entries: [] };
+                return { name, entries: await directoryResponse.json() };
+            } catch (_) {
+                return { name, entries: [] };
+            }
         }));
+        for (const { name, entries } of directoryResults) {
+            if (!Array.isArray(entries)) continue;
+            backgroundTracks.push(...entries
+                .filter(entry => entry.type === "file" && audioExtensions.has(entry.name.split(".").pop().toLowerCase()))
+                .map(file => ({ file: `${name}/${file.name}`, url: file.download_url, playlist: name })));
+        }
+        backgroundTracks.forEach(track => {
+            track.title = track.file.split("/").pop().replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ")
+                .replace(/\b[a-z]/g, letter => letter.toUpperCase());
+        });
+        backgroundTracks.sort((a, b) => a.playlist.localeCompare(b.playlist, "pt-BR", { sensitivity: "base" })
+            || a.title.localeCompare(b.title, "pt-BR", { sensitivity: "base" }));
+        if (!backgroundTracks.length) throw new Error("Nenhum arquivo de áudio foi encontrado na pasta music/music.");
+
+        const playlistNames = [...new Set(["Geral", ...directoryNames])];
+        musicPlaylistSelect.replaceChildren(new Option("Todas as músicas", "all"),
+            ...playlistNames.map(name => new Option(name, name)));
+        activePlaylist = "all";
+        musicPlaylistSelect.value = activePlaylist;
+        renderMusicTrackOptions();
         musicTrackSelect.disabled = false;
+        musicPlaylistSelect.disabled = false;
         document.getElementById("musicPrevious").disabled = false;
         document.getElementById("musicNext").disabled = false;
         musicPlayPause.disabled = false;
@@ -211,8 +348,8 @@ loadBackgroundPlaylist();
 
 document.addEventListener("pointerdown", event => {
     if (event.target.closest(".music-mixer")) return;
-    if (backgroundMusic.paused) playBackgroundMusic();
-}, { once: true });
+    if (backgroundMusic.paused && backgroundTracks.length) playBackgroundMusic();
+});
 
 
 /* =========================================
@@ -978,6 +1115,17 @@ buildMemoryDots();
 
 showMemory(0);
 window.setInterval(() => showMemory(memoryIndex + 1), 9000);
+
+document.querySelectorAll("[data-timeline-scroll]").forEach(button => {
+    button.addEventListener("click", () => {
+        const timeline = document.querySelector(".timeline");
+        if (!timeline) return;
+        const direction = Number(button.dataset.timelineScroll) || 1;
+        const card = timeline.querySelector(".timeline-item");
+        const distance = (card?.getBoundingClientRect().width || 320) + 22;
+        timeline.scrollBy({ left: direction * distance, behavior: "smooth" });
+    });
+});
 
 let activeGalleryFilter = "all";
 
