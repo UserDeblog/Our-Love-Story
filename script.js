@@ -123,7 +123,8 @@ enterLoveSiteButton.addEventListener("click", () => {
 ========================================= */
 
 const backgroundTracks = [];
-const musicFolderApi = "https://api.github.com/repos/UserDeblog/Our-Love-Story/contents/music/music?ref=master";
+const musicFolderApi = "https://api.github.com/repos/UserDeblog/Our-Love-Story/git/trees/master?recursive=1";
+const musicFolderPath = "music/music/";
 const MUSIC_PAGE_SIZE = 8;
 const MUSIC_PLAYLISTS = ["Animadas", "Calmas", "Piano", "Românticas"];
 
@@ -216,8 +217,12 @@ function renderMusicTrackOptions() {
     currentMusicPage = Math.min(Math.max(currentMusicPage, 1), pageCount);
     const firstTrack = (currentMusicPage - 1) * MUSIC_PAGE_SIZE;
     const pageTracks = tracks.slice(firstTrack, firstTrack + MUSIC_PAGE_SIZE);
-    musicTrackSelect.replaceChildren(...pageTracks.map((track, index) =>
-        new Option(track.title, String(firstTrack + index))));
+    musicTrackSelect.replaceChildren(...pageTracks.map((track, index) => {
+        const label = activePlaylist === "all" && track.playlist !== "Geral"
+            ? `${track.title} · ${track.playlist}`
+            : track.title;
+        return new Option(label, String(firstTrack + index));
+    }));
     musicTrackSelect.disabled = pageTracks.length === 0;
     musicPagination.replaceChildren();
     for (let page = 1; page <= pageCount; page++) {
@@ -231,11 +236,9 @@ function renderMusicTrackOptions() {
             currentMusicPage = page;
             renderMusicTrackOptions();
             const firstIndex = (page - 1) * MUSIC_PAGE_SIZE;
-            if (currentTrackIndex >= firstIndex && currentTrackIndex < firstIndex + MUSIC_PAGE_SIZE) {
-                musicTrackSelect.value = String(currentTrackIndex);
-            } else {
-                musicTrackSelect.value = String(firstIndex);
-            }
+            musicTrackSelect.value = String(currentTrackIndex >= firstIndex && currentTrackIndex < firstIndex + MUSIC_PAGE_SIZE
+                ? currentTrackIndex
+                : firstIndex);
         });
         musicPagination.append(button);
     }
@@ -292,11 +295,11 @@ musicPlaylistSelect.addEventListener("change", () => {
     currentTrackIndex = 0;
     renderMusicTrackOptions();
     const tracks = getVisiblePlaylistTracks();
-    if (tracks.length) loadBackgroundTrack(0, !backgroundMusic.paused);
+    if (tracks.length) loadBackgroundTrack(0, true);
     else {
         backgroundMusic.pause();
         setMusicPlaying(false);
-        musicStatus.textContent = "Adicione músicas a esta playlist";
+        musicStatus.textContent = "Adicione músicas a esta pasta para ouvir a playlist";
     }
 });
 musicPlayPause.addEventListener("click", () => {
@@ -323,7 +326,7 @@ if (savedMusicVolume !== null) document.getElementById("musicVolume").value = sa
 applyMusicVolume(getMusicVolume());
 
 async function loadBackgroundPlaylist() {
-    musicStatus.textContent = "Carregando músicas da pasta…";
+    musicStatus.textContent = "Carregando músicas…";
     musicTrackSelect.disabled = true;
     musicPlaylistSelect.disabled = true;
     document.getElementById("musicPrevious").disabled = true;
@@ -334,38 +337,36 @@ async function loadBackgroundPlaylist() {
             headers: { Accept: "application/vnd.github+json" }
         });
         if (!response.ok) throw new Error(`GitHub API respondeu ${response.status}`);
-        const rootEntries = await response.json();
+        const repositoryTree = await response.json();
+        if (!Array.isArray(repositoryTree.tree)) throw new Error("A árvore de arquivos do repositório não está disponível.");
         const audioExtensions = new Set(["mp3", "m4a", "ogg", "wav", "aac", "flac"]);
-        const directories = rootEntries.filter(entry => entry.type === "dir");
-        backgroundTracks.push(...rootEntries
-            .filter(entry => entry.type === "file" && audioExtensions.has(entry.name.split(".").pop().toLowerCase()))
-            .map(file => ({ file: file.name, url: file.download_url, playlist: "Geral" })));
-        const directoryNames = [...new Set([...MUSIC_PLAYLISTS, ...directories.map(directory => directory.name)])];
-        const directoryResults = await Promise.all(directoryNames.map(async name => {
-            const existingDirectory = directories.find(directory => directory.name === name);
-            const directoryUrl = existingDirectory?.url
-                || `https://api.github.com/repos/UserDeblog/Our-Love-Story/contents/music/music/${encodeURIComponent(name)}?ref=master`;
-            try {
-                const directoryResponse = await fetch(directoryUrl, { headers: { Accept: "application/vnd.github+json" } });
-                if (!directoryResponse.ok) return { name, entries: [] };
-                return { name, entries: await directoryResponse.json() };
-            } catch (_) {
-                return { name, entries: [] };
-            }
-        }));
-        for (const { name, entries } of directoryResults) {
-            if (!Array.isArray(entries)) continue;
-            backgroundTracks.push(...entries
-                .filter(entry => entry.type === "file" && audioExtensions.has(entry.name.split(".").pop().toLowerCase()))
-                .map(file => ({ file: `${name}/${file.name}`, url: file.download_url, playlist: name })));
-        }
+        const folderEntries = repositoryTree.tree.filter(entry => entry.path.startsWith(musicFolderPath));
+        const audioFiles = folderEntries
+            .filter(entry => entry.type === "blob" && audioExtensions.has(entry.path.split(".").pop().toLowerCase()));
+        const githubAudioUrl = path => `https://raw.githubusercontent.com/UserDeblog/Our-Love-Story/master/${path.split("/").map(encodeURIComponent).join("/")}`;
+        const directoryNames = [...new Set([
+            ...MUSIC_PLAYLISTS,
+            ...folderEntries.filter(entry => entry.type === "tree")
+                .map(entry => entry.path.slice(musicFolderPath.length).split("/")[0])
+        ])];
+        backgroundTracks.push(...audioFiles
+            .map(file => {
+                const relativePath = file.path.slice(musicFolderPath.length);
+                const segments = relativePath.split("/");
+                return {
+                    file: relativePath,
+                    url: githubAudioUrl(file.path),
+                    playlist: segments.length > 1 ? segments[0] : "Geral"
+                };
+            })
+            .filter(Boolean));
         backgroundTracks.forEach(track => {
             track.title = track.file.split("/").pop().replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ")
                 .replace(/\b[a-z]/g, letter => letter.toUpperCase());
         });
         backgroundTracks.sort((a, b) => a.playlist.localeCompare(b.playlist, "pt-BR", { sensitivity: "base" })
             || a.title.localeCompare(b.title, "pt-BR", { sensitivity: "base" }));
-        if (!backgroundTracks.length) throw new Error("Nenhum arquivo de áudio foi encontrado na pasta music/music.");
+        if (!backgroundTracks.length) throw new Error("Nenhum arquivo de áudio foi encontrado em music/music.");
 
         const playlistNames = [...new Set(["Geral", ...directoryNames])];
         musicPlaylistSelect.replaceChildren(new Option("Todas as músicas", "all"),
@@ -381,7 +382,7 @@ async function loadBackgroundPlaylist() {
         loadBackgroundTrack(0);
     } catch (error) {
         console.error("Não foi possível listar as músicas no GitHub.", error);
-        musicStatus.textContent = "Não consegui carregar a playlist do GitHub";
+        musicStatus.textContent = "Não consegui carregar as músicas do GitHub";
     }
 }
 
@@ -433,6 +434,23 @@ const originalMemories = memories.slice();
 const MEMORY_CAROUSEL_LIMIT = 6;
 const GALLERY_PAGE_SIZE = 24;
 const NEWS_PAGE_SIZE = 6;
+
+function refreshMemoryCarousel(preferredMemoryId = null) {
+    const carouselMemories = uploadedMemories
+        .filter(memory => Boolean(memory.comment?.trim()))
+        .slice(0, MEMORY_CAROUSEL_LIMIT);
+    const carousel = [
+        ...carouselMemories,
+        ...originalMemories.slice(0, MEMORY_CAROUSEL_LIMIT - carouselMemories.length)
+    ];
+    memories.splice(0, memories.length, ...carousel);
+    const preferredIndex = preferredMemoryId
+        ? memories.findIndex(memory => memory.id === preferredMemoryId)
+        : -1;
+    memoryIndex = preferredIndex >= 0 ? preferredIndex : Math.min(memoryIndex, memories.length - 1);
+    buildMemoryDots();
+    showMemory(memoryIndex);
+}
 
 const supabaseClient = window.supabase?.createClient(
     window.SUPABASE_CONFIG?.url,
@@ -1116,7 +1134,7 @@ function buildMemoryDots() {
         const dot = document.createElement("button");
         dot.type = "button";
         dot.className = "memory-dot";
-        dot.setAttribute("aria-label", `Mostrar lembrança ${index + 1}: ${memory.title.toLowerCase()}`);
+        dot.setAttribute("aria-label", `Mostrar lembrança ${index + 1}: ${(memory.title || memory.comment || "Um momento nosso").toLowerCase()}`);
         dot.addEventListener("click", () => showMemory(index));
         container.appendChild(dot);
     });
@@ -1140,9 +1158,9 @@ function showMemory(index) {
         video.hidden = true;
         image.hidden = false;
         image.src = memory.image;
-        image.alt = memory.title;
+        image.alt = memory.title || memory.comment || "Um momento nosso";
     }
-    document.getElementById("memoryTitle").textContent = memory.title;
+    document.getElementById("memoryTitle").textContent = memory.title || "UM MOMENTO NOSSO";
     document.getElementById("memoryComment").textContent = memory.comment;
     document.getElementById("memoryDate").textContent = `LEMBRANÇA ${memoryIndex + 1} DE ${memories.length}`;
 
@@ -1633,36 +1651,21 @@ function addGalleryItem(memory) {
         video.muted = true;
         video.preload = "metadata";
         video.playsInline = true;
-        video.addEventListener("click", () => openMedia(memory.image, memory.title, "video"));
+        video.addEventListener("click", () => openMedia(memory.image, memory.title || "Vídeo da galeria", "video"));
         item.appendChild(video);
     } else {
         const image = document.createElement("img");
         image.src = memory.image;
-        image.alt = memory.title;
-        image.addEventListener("click", () => openMedia(memory.image, memory.title, "image"));
+        image.alt = memory.title || "Foto da galeria";
+        image.addEventListener("click", () => openMedia(memory.image, memory.title || "Foto da galeria", "image"));
         item.appendChild(image);
     }
-    const caption = document.createElement("span");
-    caption.className = "gallery-caption";
-    const captionTitle = document.createElement("strong");
-    captionTitle.textContent = memory.title;
-    caption.appendChild(captionTitle);
-    const captionMeta = document.createElement("span");
-    const categoryLabel = (memory.category || "us").replace("-", " ").toUpperCase();
-    captionMeta.textContent = `${memory.type === "video" ? "VIDEO" : "PHOTO"} · ${categoryLabel}`;
-    caption.appendChild(captionMeta);
-    if (memory.comment) {
-        const captionSubtitle = document.createElement("span");
-        captionSubtitle.textContent = memory.comment;
-        caption.appendChild(captionSubtitle);
-    }
-    item.appendChild(caption);
     if (memory.id) {
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
         deleteButton.className = "gallery-delete-button";
         deleteButton.textContent = "×";
-        deleteButton.setAttribute("aria-label", `Apagar ${memory.title}`);
+        deleteButton.setAttribute("aria-label", `Apagar ${memory.title || "foto da galeria"}`);
         deleteButton.title = "Apagar esta lembrança";
         deleteButton.hidden = !galleryAdminIsAllowed;
         deleteButton.addEventListener("click", () => deleteGalleryMemory(memory.id));
@@ -1751,7 +1754,7 @@ async function deleteGalleryMemory(memoryId) {
     if (!galleryAdminIsAllowed) return;
     const memory = uploadedMemories.find(item => item.id === memoryId);
     if (!memory) return;
-    const confirmed = window.confirm(`Apagar “${memory.title}” da galeria? Essa ação não pode ser desfeita.`);
+    const confirmed = window.confirm(`Apagar “${memory.title || memory.comment || "esta foto"}” da galeria? Essa ação não pode ser desfeita.`);
     if (!confirmed) return;
 
     const status = document.getElementById("galleryAdminStatus");
@@ -1785,16 +1788,10 @@ async function deleteGalleryMemory(memoryId) {
     }
 
     uploadedMemories = uploadedMemories.filter(item => item.id !== memoryId);
-    const carouselMemories = uploadedMemories.slice(0, MEMORY_CAROUSEL_LIMIT);
-    memories.splice(0, memories.length,
-        ...carouselMemories,
-        ...originalMemories.slice(0, MEMORY_CAROUSEL_LIMIT - carouselMemories.length));
+    refreshMemoryCarousel();
     const galleryItem = Array.from(document.querySelector(".gallery").children)
         .find(item => item.dataset.memoryId === memoryId);
     galleryItem?.remove();
-    memoryIndex = 0;
-    buildMemoryDots();
-    showMemory(0);
     renderGalleryPage(1);
     status.textContent = "Lembrança apagada da galeria.";
 }
@@ -1829,12 +1826,7 @@ async function loadSavedMemories() {
         document.querySelectorAll(".gallery-item[data-uploaded='true']").forEach(item => item.remove());
         savedMemories.forEach(addGalleryItem);
         uploadedMemories = savedMemories.slice().reverse();
-        const carouselMemories = uploadedMemories.slice(0, MEMORY_CAROUSEL_LIMIT);
-        memories.splice(0, memories.length,
-            ...carouselMemories,
-            ...originalMemories.slice(0, MEMORY_CAROUSEL_LIMIT - carouselMemories.length));
-        buildMemoryDots();
-        showMemory(memoryIndex);
+        refreshMemoryCarousel();
         renderGalleryPage(1);
     } catch (error) {
         console.error("Não foi possível carregar as lembranças do Supabase.", error);
@@ -1885,8 +1877,8 @@ async function addMemoryUpload() {
     }
     const title = titleInput.value.trim();
     const subtitle = subtitleInput.value.trim();
-    if (!file || !title || !subtitle) {
-        status.textContent = "Escolha um arquivo e preencha o título e o subtítulo.";
+    if (!file) {
+        status.textContent = "Escolha uma foto ou vídeo para enviar.";
         return;
     }
     if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
@@ -1934,11 +1926,8 @@ async function addMemoryUpload() {
             createdAt: inserted.created_at
         };
         uploadedMemories.unshift(memory);
-        memories.unshift(memory);
-        memories.length = Math.min(memories.length, MEMORY_CAROUSEL_LIMIT);
         addGalleryItem(memory);
-        buildMemoryDots();
-        showMemory(0);
+        if (subtitle) refreshMemoryCarousel(inserted.id);
         const galleryItems = Array.from(document.querySelector(".gallery").children);
         const matchingCount = galleryItems.filter(item => activeGalleryFilter === "all"
             || (activeGalleryFilter === "videos" && (item.dataset.type === "video" || item.dataset.category === "videos"))
@@ -1951,7 +1940,9 @@ async function addMemoryUpload() {
         titleInput.value = "";
         subtitleInput.value = "";
         categoryInput.value = "us";
-        status.textContent = "Lembrança enviada e compartilhada na galeria!";
+        status.textContent = subtitle
+            ? "Foto enviada para Our Photos e adicionada ao carrossel de lembranças!"
+            : "Foto enviada para Our Photos. Sem legenda, ela não entrou no carrossel.";
     } catch (error) {
         console.error("Falha ao enviar mídia ao Supabase.", error);
         status.textContent = "Não foi possível enviar. Verifique sua conexão e as políticas configuradas no Supabase.";

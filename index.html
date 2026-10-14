@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css">
 
-    <link rel="stylesheet" href="style.css?v=20261013-theme-blur">
+    <link rel="stylesheet" href="style.css?v=20261014-radio-playlists">
 </head>
 
 <body class="intro-active">
@@ -665,8 +665,8 @@
                     <input class="memory-file-input" type="file" id="memoryFile" accept="image/*,video/*" aria-label="Escolher uma foto ou vídeo">
                     <span id="memoryFileName" class="place-photo-name">Nenhum arquivo escolhido</span>
                 </div>
-                <input type="text" id="memoryUploadTitle" maxlength="100" placeholder="Título da lembrança">
-                <textarea id="memoryUploadSubtitle" maxlength="300" placeholder="Subtítulo ou comentário"></textarea>
+                <input type="text" id="memoryUploadTitle" maxlength="100" placeholder="Título para o carrossel (opcional)">
+                <textarea id="memoryUploadSubtitle" maxlength="300" placeholder="Legenda do carrossel (opcional; sem legenda, a foto fica só em Our Photos)"></textarea>
                 <label class="upload-label" for="memoryUploadCategory">Categoria da lembrança</label>
                 <select id="memoryUploadCategory" class="upload-category">
                     <option value="us">US</option>
@@ -919,7 +919,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
-<script src="script.js?v=20261013-theme-blur"></script>
+<script src="script.js?v=20261014-radio-playlists-github"></script>
 <script type="module">
     try {
         const maplibregl = await import("https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs");
