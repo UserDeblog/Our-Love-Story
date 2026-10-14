@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css">
 
-    <link rel="stylesheet" href="style.css?v=20261014-radio-playlists">
+    <link rel="stylesheet" href="style.css?v=20261014-gallery-refresh">
 </head>
 
 <body class="intro-active">
@@ -25,16 +25,16 @@
 
     <div class="intro-card">
         <div class="intro-seal" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M50 84 18 54C-2 34 22 8 44 28l6 6 6-6c22-20 46 6 26 26L50 84Z"/></svg></div>
-        <span class="intro-kicker">UMA EDIÇÃO ESPECIAL</span>
+        <span class="intro-kicker">A SPECIAL EDITION</span>
         <div class="intro-rule"><span>✦</span></div>
         <p class="intro-note">THE STORY OF US</p>
-        <h1 id="introTitle">Uma história feita de nós</h1>
-        <p class="intro-message">Cada foto, cada notícia e cada canção guarda um pedacinho do nosso amor.</p>
+        <h1 id="introTitle">The story of our lives </h1>
+        <p class="intro-message">Here is everything I've saved from our journey together.</p>
         <button id="enterLoveSite" class="intro-enter-button" type="button">
-            <span>Entrar na nossa história</span>
+            <span>Enter our story</span>
             <span class="intro-enter-arrow" aria-hidden="true">→</span>
         </button>
-        <span class="intro-footer">FEITO COM AMOR, PARA SEMPRE</span>
+        <span class="intro-footer">MADE WITH LOVE, FOR SAMUCA, FOR ETERNITY</span>
     </div>
 </section>
 
@@ -44,8 +44,6 @@
 
     <div class="top-bar">
         <span id="currentDate"></span>
-        <span>NEWSPAPER OF OUR LOVE</span>
-        <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false" aria-label="Ativar modo escuro"><span aria-hidden="true">☾</span><b>Modo escuro</b></button>
     </div>
 
     <div class="header-main">
@@ -54,7 +52,7 @@
             <span class="logo-small">THE</span>
             <h1>Our Love Chronicle</h1>
             <span class="logo-subtitle">
-                Historia da nossa trajetoria.
+                The story of our lives.
             </span>
         </div>
 
@@ -73,7 +71,7 @@
         </button>
 
         <button class="nav-btn" data-page="photos">
-            NOSSAS FOTOS
+            OUR PHOTOS
         </button>
 
         <button class="nav-btn" data-page="timeline">
@@ -85,7 +83,7 @@
         </button>
 
         <button class="nav-btn" data-page="our-plans">
-            NOSSOS PLANOS
+            OUR PLANS
         </button>
 
     </nav>
@@ -120,7 +118,6 @@
             <div class="image-container">
                 <img id="memoryImage" src="images/foto30.jpeg" alt="Nosso momento">
                 <video id="memoryVideo" muted playsinline loop hidden></video>
-                <span class="category">Lembranças</span>
                 <button class="memory-arrow memory-previous" type="button" aria-label="Foto anterior" onclick="showMemory(memoryIndex - 1)">‹</button>
                 <button class="memory-arrow memory-next" type="button" aria-label="Próxima foto" onclick="showMemory(memoryIndex + 1)">›</button>
                 <div id="memoryDots" class="memory-dots" aria-label="Selecionar lembrança"></div>
@@ -138,7 +135,7 @@
                 </p>
 
                 <button class="read-more" onclick="openPage('timeline')">
-                    Ver a linha do tempo  →
+                    Ver a nossa linha do tempo  →
                 </button>
 
             </div>
@@ -162,9 +159,9 @@
                     </h3>
 
                     <p>
-                        Foi o dia mais incrível das nossas vidas. vimos o por do sol juntos e foi lindo.
-                        Porque até os dias comuns ficam especiais
-                        quando estamos juntos.
+                        Foi o dia mais incrível das nossas vidas. vimos o por do sol juntos, me fala se isso vai acontecer dnv?
+                        Porque até os dias comuns viram especiais
+                        quando estou junto com ela.
                     </p>
                 </div>
 
@@ -181,7 +178,7 @@
                     </span>
 
                     <h3>
-                        Passamos a noite juntos e foi incrível.
+                        Passamos a noite juntos, foi muito engraçado esse dia kk.
                     </h3>
 
                     <p>
@@ -230,12 +227,11 @@
                     <span>MEMORY • 2026</span>
 
                     <h3>
-                        Nos não queríamos que aquele dia acabasse.
+                       Um dos dias mais legais juntos na igreja
                     </h3>
 
                     <p>
-                        Um momento simples que acabou se tornando
-                        uma das nossas melhores lembranças.
+                        A gente passou o dia juntos,
                     </p>
                 </div>
 
@@ -250,12 +246,11 @@
                     <span>LOVE • 2026</span>
 
                     <h3>
-                        Momentos simples, mas especiais.
+                        Outra foto do por do sol, sem duvidas um dos dias mais incriveis juntos.
                     </h3>
 
                     <p>
-                        Algumas memórias não precisam de grandes
-                        acontecimentos para serem especiais.
+                        Amo passar meu tempo com ela, cada segundo pra mim vale tudo.
                     </p>
                 </div>
 
@@ -270,12 +265,11 @@
                     <span>US • 2026</span>
 
                     <h3>
-                        Nós dois, simplesmente nós.
+                        Primeira vez depois da colportagem
                     </h3>
 
                     <p>
-                        Porque estarmos juntos, já é motivo suficiente
-                        para transformar qualquer dia.
+                        Eu tinha voltado da colportagem e esse foi o primeiro momento nosso que se vimos.
                     </p>
                 </div>
 
@@ -342,53 +336,47 @@
 
     <div class="page-header">
 
-        <span>OUR ARCHIVE</span>
+        <span>OUR COLLECTION</span>
 
         <h2>
-            Our Photos
+            Our photos
         </h2>
 
         <p>
-            Every picture tells a little part of our story.
+            Cada foto guarda uma memoria juntos.
         </p>
 
-    </div>
-
-
-    <div class="gallery-admin-tools">
-        <h3>Manage Gallery</h3>
-        <p id="galleryAdminMessage">Entre como administrador para apagar uploads indesejados.</p>
-        <div id="galleryAdminLogin">
-            <input type="email" id="galleryAdminEmail" autocomplete="username" placeholder="E-mail do administrador">
-            <input type="password" id="galleryAdminPassword" autocomplete="current-password" placeholder="Senha">
-            <button type="button" onclick="loginGalleryAdmin()">ADMIN SIGN IN</button>
-        </div>
-        <button id="galleryAdminLogout" type="button" onclick="logoutGalleryAdmin()" hidden>SIGN OUT</button>
-        <p id="galleryAdminStatus" class="upload-status" role="status" aria-live="polite"></p>
     </div>
 
 
     <div class="photo-filters">
 
         <button class="photo-filter active" type="button" data-filter="all">
-            ALL
+            All
         </button>
 
         <button class="photo-filter" type="button" data-filter="us">
-            US
+            Us
         </button>
 
         <button class="photo-filter" type="button" data-filter="dates">
-            DATES
+            Dates 
         </button>
 
         <button class="photo-filter" type="button" data-filter="special-days">
-            SPECIAL DAYS
+            Special days
         </button>
 
         <button class="photo-filter" type="button" data-filter="videos">
-            VIDEOS
+            Videos
         </button>
+
+        <label class="gallery-sort-control" for="gallerySortOrder">Ordenar
+            <select id="gallerySortOrder" aria-label="Ordenar fotos">
+                <option value="newest">Mais recentes</option>
+                <option value="oldest">Mais antigas</option>
+            </select>
+        </label>
 
     </div>
 
@@ -397,6 +385,18 @@
 
     </div>
     <nav id="galleryPagination" class="gallery-pagination" aria-label="Paginação da galeria"></nav>
+
+    <div class="gallery-admin-tools">
+        <h3>Organizar galeria</h3>
+        <p id="galleryAdminMessage">Entra como ADM para mudar as fotos.</p>
+        <div id="galleryAdminLogin">
+            <input type="email" id="galleryAdminEmail" autocomplete="username" placeholder="E-mail do administrador">
+            <input type="password" id="galleryAdminPassword" autocomplete="current-password" placeholder="Senha">
+            <button type="button" onclick="loginGalleryAdmin()">Entrar como ADM</button>
+        </div>
+        <button id="galleryAdminLogout" type="button" onclick="logoutGalleryAdmin()" hidden>Sair da conta</button>
+        <p id="galleryAdminStatus" class="upload-status" role="status" aria-live="polite"></p>
+    </div>
 
 </section>
 
@@ -602,7 +602,7 @@
     </div>
 
     <section class="date-roulette" aria-labelledby="dateRouletteTitle">
-        <div class="date-roulette-copy"><span class="section-label">A PRÓXIMA MEMÓRIA COMEÇA AQUI</span><h3 id="dateRouletteTitle">Roleta de encontros</h3><p>Sem saber o que fazer? Deixem a sorte escolher um momento para vocês.</p><div id="dateRouletteResult" class="date-roulette-result" aria-live="polite">Girem a roleta para descobrir ✨</div><button id="spinDateRoulette" type="button">Girar a roleta <span>↗</span></button>
+        <div class="date-roulette-copy"><span class="section-label">Sorteio de coisas para fazer</span><h3 id="dateRouletteTitle">Roleta de dates</h3><p>A sorte vai escolher por nós.</p><div id="dateRouletteResult" class="date-roulette-result" aria-live="polite">Gire a roleta para descobrir</div><button id="spinDateRoulette" type="button">Girar a roleta <span>↗</span></button>
             <div class="date-idea-manager"><h4>Nossas ideias</h4><form id="dateIdeaForm"><input id="dateIdeaInput" maxlength="90" placeholder="Adicionar uma ideia de encontro" required><button id="saveDateIdea" type="submit">Adicionar</button><button id="cancelDateIdeaEdit" type="button" hidden>Cancelar</button></form><p id="dateIdeaStatus" aria-live="polite"></p><ul id="dateIdeaList" aria-label="Ideias salvas para a roleta"></ul></div>
         </div>
         <div class="date-wheel-wrap"><div id="dateWheel" class="date-wheel" role="img" aria-label="Roleta com ideias de encontros"><span class="wheel-center">♥</span></div><span class="wheel-pointer" aria-hidden="true">▼</span></div>
@@ -652,7 +652,7 @@
         <section class="news-upload-panel">
             <div class="plan-panel-heading">
                 <span class="section-label">NOSSAS LEMBRANÇAS</span>
-                <h3>Add a Photo or Video</h3>
+                <h3>Guardar uma foto ou vídeo</h3>
                 <p>Novas lembranças aparecerão na galeria para todos que acessarem o site.</p>
             </div>
             <div class="news-upload-form">
@@ -666,15 +666,9 @@
                     <span id="memoryFileName" class="place-photo-name">Nenhum arquivo escolhido</span>
                 </div>
                 <input type="text" id="memoryUploadTitle" maxlength="100" placeholder="Título para o carrossel (opcional)">
-                <textarea id="memoryUploadSubtitle" maxlength="300" placeholder="Legenda do carrossel (opcional; sem legenda, a foto fica só em Our Photos)"></textarea>
-                <label class="upload-label" for="memoryUploadCategory">Categoria da lembrança</label>
-                <select id="memoryUploadCategory" class="upload-category">
-                    <option value="us">US</option>
-                    <option value="dates">DATES</option>
-                    <option value="special-days">SPECIAL DAYS</option>
-                    <option value="videos">VIDEOS</option>
-                </select>
-                <button id="uploadMemoryButton" type="button" onclick="addMemoryUpload()">ADD TO GALLERY</button>
+                <textarea id="memoryUploadSubtitle" maxlength="300" placeholder="Legenda do carrossel (opcional; sem legenda, a foto aparece só na galeria)"></textarea>
+                <input type="hidden" id="memoryUploadCategory" value="us">
+                <button id="uploadMemoryButton" class="memory-upload-button" type="button" onclick="addMemoryUpload()">Adicionar à galeria</button>
                 <p id="uploadStatus" class="upload-status" role="status" aria-live="polite"></p>
             </div>
         </section>
@@ -844,6 +838,10 @@
 
 <div id="imageModal" class="image-modal">
 
+    <button class="modal-gallery-nav modal-gallery-previous" type="button" aria-label="Foto anterior" hidden>‹</button>
+    <button class="modal-gallery-nav modal-gallery-next" type="button" aria-label="Próxima foto" hidden>›</button>
+    <span id="modalGalleryPosition" class="modal-gallery-position" aria-live="polite"></span>
+
     <button class="close-modal" onclick="closeImage()">
         ×
     </button>
@@ -885,6 +883,8 @@
 
 </footer>
 
+<div class="floating-action-stack">
+    <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false" aria-label="Ativar modo escuro" title="Alternar modo claro e escuro"><span aria-hidden="true">☾</span></button>
 <aside id="musicMixer" class="music-mixer is-collapsed" aria-label="Mixer de música de fundo">
     <div id="musicMixerPanel" class="music-mixer-panel" aria-hidden="true">
         <div class="music-mixer-heading">
@@ -916,10 +916,11 @@
     </button>
     <audio id="backgroundMusic" preload="metadata"></audio>
 </aside>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
-<script src="script.js?v=20261014-radio-playlists-github"></script>
+<script src="script.js?v=20261014-gallery-refresh"></script>
 <script type="module">
     try {
         const maplibregl = await import("https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs");

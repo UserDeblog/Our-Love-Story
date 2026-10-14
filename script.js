@@ -48,16 +48,17 @@ function updateLoveCounter() {
     const seconds = Math.floor((remainingMs % 60000) / 1000);
 
     const duration = [];
-    if (years) duration.push(`${years} ${years === 1 ? "YEAR" : "YEARS"}`);
-    if (months) duration.push(`${months} ${months === 1 ? "MONTH" : "MONTHS"}`);
-    duration.push(`${days} ${days === 1 ? "DAY" : "DAYS"}`);
+    if (years) duration.push(`${years} ${years === 1 ? "ANO" : "ANOS"}`);
+    if (months) duration.push(`${months} ${months === 1 ? "MÊS" : "MESES"}`);
+    duration.push(`${days} ${days === 1 ? "DIA" : "DIAS"}`);
 
     document.getElementById("loveCounter").textContent = duration.join(" · ");
     document.getElementById("loveCounterTime").textContent =
-        `${String(hours).padStart(2, "0")} HOURS · ${String(minutes).padStart(2, "0")} MINUTES · ${String(seconds).padStart(2, "0")} SECONDS`;
-    document.getElementById("currentDate").textContent = new Intl.DateTimeFormat("pt-BR", {
-        weekday: "long", day: "2-digit", month: "long", year: "numeric"
-    }).format(now).toLocaleUpperCase("pt-BR");
+        `${String(hours).padStart(2, "0")} H · ${String(minutes).padStart(2, "0")} MIN · ${String(seconds).padStart(2, "0")} SEG`;
+    const compactDate = new Intl.DateTimeFormat("pt-BR", {
+        weekday: "short", day: "2-digit", month: "short", year: "numeric"
+    }).format(now).replace(/\./g, "").toLocaleUpperCase("pt-BR");
+    document.getElementById("currentDate").textContent = `${compactDate} · NOSSO JORNAL`;
 }
 
 updateLoveCounter();
@@ -70,7 +71,6 @@ function setPageTheme(isDark) {
     themeToggle.setAttribute("aria-pressed", String(isDark));
     themeToggle.setAttribute("aria-label", isDark ? "Ativar modo claro" : "Ativar modo escuro");
     themeToggle.querySelector("span").textContent = isDark ? "☀" : "☾";
-    themeToggle.querySelector("b").textContent = isDark ? "Modo claro" : "Modo escuro";
     try { localStorage.setItem("loveChronicleTheme", isDark ? "dark" : "light"); } catch (_) {}
 }
 setPageTheme(savedTheme === "dark");
@@ -530,10 +530,10 @@ function initializeLovePlacesMap() {
         selectedPointMarker = new maplibregl.Marker({ color: "#dc6e86" }).setLngLat([selectedMapPoint.longitude, selectedMapPoint.latitude]).addTo(lovePlacesMap);
     });
     lovePlacesMap.on("error", event => {
-        console.warn("Não foi possível carregar o globo de satélite.", event.error);
+        console.warn("Não foi possível carregar o mundo, da uma atualizada ai bb.", event.error);
         if (!lovePlacesMapReady) {
             document.getElementById("mapLoading").hidden = false;
-            document.getElementById("mapLoading").textContent = "O globo não carregou. Confira sua conexão e atualize a página.";
+            document.getElementById("mapLoading").textContent = "O globo não carregou bb, Fala com o Samuel kk.";
         }
     });
     lovePlacesMap.once("load", () => {
@@ -548,7 +548,7 @@ if (window.maplibregl) initializeLovePlacesMap();
 document.getElementById("mapGoTaubate").addEventListener("click", () => {
     selectedMapPoint = taubateStartingPoint;
     document.getElementById("placeName").value = "Taubaté, São Paulo, Brasil";
-    document.getElementById("placeCoordinates").textContent = "Ponto inicial selecionado em Taubaté, São Paulo. Você pode mudar o ponto tocando no globo.";
+    document.getElementById("placeCoordinates").textContent = "Ponto inicial selecionado em Taubaté, São Paulo. Fofinha, vc pode mudar o ponto tocando no globo.";
     lovePlacesMap?.flyTo({ center: [taubateStartingPoint.longitude, taubateStartingPoint.latitude], zoom: 9, essential: true });
     if (selectedPointMarker) selectedPointMarker.remove(); selectedPointMarker = null;
     if (lovePlacesMapReady) renderPlaces();
@@ -585,9 +585,9 @@ document.getElementById("searchPlaceAddress").addEventListener("click", async ()
     const status = document.getElementById("addressSearchStatus");
     const resultsWrap = document.getElementById("addressResultsWrap");
     const resultsSelect = document.getElementById("addressResults");
-    if (!query) { status.textContent = "Digite uma cidade ou lugar para buscar."; return; }
+    if (!query) { status.textContent = "Digite uma cidade ou lugar para buscar bb."; return; }
     const button = document.getElementById("searchPlaceAddress");
-    button.disabled = true; status.textContent = "Buscando opções…"; resultsWrap.hidden = true;
+    button.disabled = true; status.textContent = "Buscando opções fofa…"; resultsWrap.hidden = true;
     try {
         let cache = {};
         try { cache = JSON.parse(localStorage.getItem(addressSearchCacheKey) || "{}"); } catch (_) {}
@@ -604,7 +604,7 @@ document.getElementById("searchPlaceAddress").addEventListener("click", async ()
             cache[cacheKey] = found;
             try { localStorage.setItem(addressSearchCacheKey, JSON.stringify(cache)); } catch (_) {}
         }
-        if (!found.length) { status.textContent = "Nenhum resultado encontrado. Tente outra forma de escrever o local."; return; }
+        if (!found.length) { status.textContent = "Nenhum resultado encontrado amorzinho. Tenta escreve outro ai, esse treco é meio bugado."; return; }
         resultsSelect.replaceChildren();
         found.forEach((item, index) => {
             const option = document.createElement("option"); option.value = String(index); option.textContent = item.display_name; resultsSelect.append(option);
@@ -614,7 +614,7 @@ document.getElementById("searchPlaceAddress").addEventListener("click", async ()
             if (!item) return;
             selectedMapPoint = { longitude: Number(item.lon), latitude: Number(item.lat) };
             document.getElementById("placeName").value = item.display_name.split(",").slice(0, 3).join(",");
-            document.getElementById("placeCoordinates").textContent = `Local selecionado: ${item.display_name}. O ponto foi movido no globo.`;
+            document.getElementById("placeCoordinates").textContent = `Local selecionado: ${item.display_name}. O ponto foi movido no globo bb.`;
             if (taubateDefaultMarker) { taubateDefaultMarker.remove(); taubateDefaultMarker = null; }
             if (selectedPointMarker) selectedPointMarker.remove();
             selectedPointMarker = new window.maplibregl.Marker({ color: "#dc6e86" }).setLngLat([selectedMapPoint.longitude, selectedMapPoint.latitude]).addTo(lovePlacesMap);
@@ -622,9 +622,9 @@ document.getElementById("searchPlaceAddress").addEventListener("click", async ()
         };
         resultsWrap.hidden = false;
         resultsSelect.dispatchEvent(new Event("change"));
-        status.textContent = "Escolha uma opção para mover o ponto. © OpenStreetMap contributors.";
+        status.textContent = "Escolha uma opção para mover o ponto princesa. © OpenStreetMap contributors.";
     } catch (_) {
-        status.textContent = "Não foi possível buscar agora. Você ainda pode tocar no globo para escolher o ponto.";
+        status.textContent = "Princesa, desculpa mas foi possível buscar agora. Você ainda pode tocar no globo para escolher o ponto.";
     } finally { button.disabled = false; }
 });
 
@@ -644,7 +644,7 @@ function renderLetters() {
     container.replaceChildren();
     const letters = [...planData.letters].sort((a, b) => String(a.open_on).localeCompare(String(b.open_on)));
     if (!letters.length) {
-        container.innerHTML = '<p class="empty-plan-state">A primeira cartinha de vocês pode começar aqui 💌</p>';
+        container.innerHTML = '<p class="empty-plan-state">A primeira cartinha nossa começa aqui 💌</p>';
         return;
     }
     letters.forEach(letter => {
@@ -673,7 +673,7 @@ function openLetterDetail(letterId) {
     const isOpen = !letter.open_on || letter.open_on <= todayISO();
     document.getElementById("letterDetailTitle").textContent = letter.title;
     document.getElementById("letterDetailMeta").textContent = `${letter.author || "Nós dois"} · Criada em ${planDateLabel(String(letter.created_at || "").slice(0, 10))}${letter.open_on ? ` · ${isOpen ? "Aberta em" : "Abre em"} ${planDateLabel(letter.open_on)}` : ""}`;
-    document.getElementById("letterDetailBody").textContent = isOpen ? letter.message : `🔒 Esta cartinha fica fechada até ${planDateLabel(letter.open_on)}.`;
+    document.getElementById("letterDetailBody").textContent = isOpen ? letter.message : `🔒 Fofinha, Esta cartinha fica fechada até ${planDateLabel(letter.open_on)}.`;
     const actions = document.getElementById("letterDetailActions");
     actions.replaceChildren();
     if (galleryAdminIsAllowed && letter.editable !== false && isOpen) {
@@ -715,7 +715,7 @@ async function deleteLetter(letter) {
     if (!galleryAdminIsAllowed || letter.deletable === false) return;
     if (!window.confirm(`Apagar a cartinha “${letter.title}”?`)) return;
     const { error } = await supabaseClient.from("love_letters").delete().eq("id", letter.id);
-    if (error) { document.getElementById("letterStatus").textContent = "Não foi possível apagar a cartinha. Confira o SQL do Supabase."; return; }
+    if (error) { document.getElementById("letterStatus").textContent = "Me desculpa fofa, Não deu pra apaga a cartinha, problema de conexão."; return; }
     planData.letters = planData.letters.filter(item => String(item.id) !== String(letter.id));
     savePlanLocally("letters"); renderLetters(); closeLetterDetail();
 }
@@ -729,7 +729,7 @@ function renderCapsules() {
     form.hidden = !isAdmin;
     container.replaceChildren();
     if (!planData.capsules.length) {
-        container.innerHTML = '<p class="empty-plan-state">Nenhuma cápsula foi guardada ainda.</p>';
+        container.innerHTML = '<p class="empty-plan-state">Nenhuma cápsula foi guardada ainda xuxu.</p>';
         return;
     }
     [...planData.capsules].sort((a, b) => String(a.open_on).localeCompare(String(b.open_on))).forEach(capsule => {
@@ -740,11 +740,11 @@ function renderCapsules() {
         meta.textContent = `${capsule.author || "Nós dois"} · ${isOpen ? `Pode ser aberta desde ${planDateLabel(capsule.open_on)}` : `Trancada até ${planDateLabel(capsule.open_on)}`}`;
         const content = document.createElement("div"); content.className = "capsule-content";
         if (!isAdmin || !isOpen) {
-            content.textContent = isOpen ? "🔒 Entre no modo administrador para ler esta cápsula." : "🔒 O que foi escrito continua guardado até a data escolhida.";
+            content.textContent = isOpen ? "🔒 Entre no modo administrador para ler esta cápsula fofa." : "🔒 Princesa, o que foi escrito continua guardado até a data acaba.";
         } else if (capsule.message) {
             content.textContent = capsule.message;
         } else {
-            content.textContent = "O texto não pôde ser carregado. Confira a conexão e as políticas do Supabase.";
+            content.textContent = "Não acreidito, o texto não deu pra carrega. Deve ser problema de conexão.";
         }
         card.append(title, meta, content);
         if (isAdmin) {
@@ -758,7 +758,7 @@ function renderCapsules() {
 async function deleteCapsule(capsule) {
     if (!galleryAdminIsAllowed || !window.confirm(`Apagar a cápsula “${capsule.title}”?`)) return;
     const { error } = await supabaseClient.from("love_capsules").delete().eq("id", capsule.id);
-    if (error) { document.getElementById("capsuleStatus").textContent = "Não foi possível apagar a cápsula. Confira o SQL do Supabase."; return; }
+    if (error) { document.getElementById("capsuleStatus").textContent = "Não acreidito, o texto não deu pra carrega. Deve ser problema de conexão."; return; }
     planData.capsules = planData.capsules.filter(item => String(item.id) !== String(capsule.id));
     renderCapsules();
 }
@@ -771,7 +771,7 @@ function startPlaceEdit(place) {
     document.getElementById("placePhoto").value = "";
     document.getElementById("placePhotoName").textContent = "Nenhuma foto escolhida";
     selectedMapPoint = { longitude: Number(place.longitude), latitude: Number(place.latitude) };
-    document.getElementById("placeCoordinates").textContent = `Editando ponto selecionado: ${selectedMapPoint.latitude}°, ${selectedMapPoint.longitude}°. Escolha uma nova foto se quiser substituir a atual.`;
+    document.getElementById("placeCoordinates").textContent = `Editando ponto selecionado: ${selectedMapPoint.latitude}°, ${selectedMapPoint.longitude}°. Escolha uma nova foto se quiser substituir a atual bbzinho.`;
     document.getElementById("savePlaceButton").textContent = "SALVAR ALTERAÇÕES";
     document.getElementById("cancelPlaceEdit").hidden = false;
     if (selectedPointMarker) selectedPointMarker.remove();
@@ -793,7 +793,7 @@ function cancelPlaceEdit() {
     if (selectedPointMarker) selectedPointMarker.remove();
     selectedPointMarker = null;
     selectedMapPoint = taubateStartingPoint;
-    document.getElementById("placeCoordinates").textContent = "Ponto inicial selecionado em Taubaté, São Paulo. Você pode mudar o ponto tocando no globo.";
+    document.getElementById("placeCoordinates").textContent = "Ponto inicial selecionado em Taubaté, São Paulo. Você pode mudar o ponto tocando no globo fofa.";
     if (lovePlacesMapReady) renderPlaces();
 }
 
@@ -801,7 +801,7 @@ function renderPlaces() {
     const list = document.getElementById("placesList");
     list.replaceChildren();
     renderPlaceMarkers();
-    if (!planData.places.length) list.innerHTML = '<p class="empty-plan-state">Os lugares especiais de vocês vão aparecer aqui.</p>';
+    if (!planData.places.length) list.innerHTML = '<p class="empty-plan-state">Os lugares especiais pra gente vão aparecer aqui.</p>';
     planData.places.forEach(place => {
         const card = document.createElement("article");
         card.className = `place-card${place.kind === "dream" ? " dream" : ""}`;
@@ -833,7 +833,7 @@ function renderPlaceMarkers() {
         const pin = document.createElement("span"); pin.className = "maplibre-place-marker map-marker-placeholder"; pin.textContent = "⌖";
         const popupContent = document.createElement("div"); popupContent.className = "place-popup";
         const title = document.createElement("strong"); title.textContent = "Taubaté, São Paulo";
-        const note = document.createElement("span"); note.textContent = "Ponto inicial — adicione a foto de vocês pelo formulário."; popupContent.append(title, note);
+        const note = document.createElement("span"); note.textContent = "Ponto inicial — adicione a foto de vocês pelo formulário. não esquece."; popupContent.append(title, note);
         taubateDefaultMarker = new window.maplibregl.Marker({ element: pin, anchor: "center" }).setLngLat([taubateStartingPoint.longitude, taubateStartingPoint.latitude]).setPopup(new window.maplibregl.Popup({ offset: 18 }).setDOMContent(popupContent)).addTo(lovePlacesMap);
     }
     const places = planData.places.filter(place => Number.isFinite(Number(place.latitude)) && Number.isFinite(Number(place.longitude)));
@@ -905,7 +905,7 @@ async function persistPlanItem(kind, item) {
     const table = { letters: "love_letters", places: "love_places", checklist: "love_checklist" }[kind];
     const { error } = await supabaseClient.from(table).insert(item);
     if (error) {
-        console.error(`Não foi possível sincronizar ${table}.`, error);
+        console.error(`Princesa, Não foi possível sincronizar ${table}.`, error);
         return false;
     }
     return true;
@@ -917,7 +917,7 @@ async function removePlanItem(kind, id) {
     if (supabaseClient) {
         const table = { letters: "love_letters", places: "love_places", checklist: "love_checklist" }[kind];
         const { error } = await supabaseClient.from(table).delete().eq("id", id);
-        if (error) console.error(`Não foi possível remover o item de ${table}.`, error);
+        if (error) console.error(`Princesa, Não foi possível remover o item de ${table}.`, error);
     }
 }
 
@@ -927,7 +927,7 @@ async function updateChecklistItem(id, done) {
     item.done = done; savePlanLocally("checklist"); renderChecklist();
     if (supabaseClient) {
         const { error } = await supabaseClient.from("love_checklist").update({ done }).eq("id", id);
-        if (error) console.error("Não foi possível sincronizar a checklist.", error);
+        if (error) console.error("Princesa, Não foi possível sincronizar a checklist.", error);
     }
 }
 
@@ -937,7 +937,7 @@ async function loadCouplePlans() {
     await Promise.all(Object.entries(tables).map(async ([kind, table]) => {
         const fields = kind === "capsules" ? "id, title, open_on, author, created_at" : "*";
         const { data, error } = await supabaseClient.from(table).select(fields).order("created_at", { ascending: true });
-        if (error) { console.warn(`Não foi possível carregar ${table}; mantendo os dados locais.`, error); return; }
+        if (error) { console.warn(`Princesa, Não foi possível carregar ${table}; mantendo os dados locais, chama o Samuel.`, error); return; }
         if (kind === "capsules") planData.capsules = data || [];
         else { planData[kind] = data || []; savePlanLocally(kind); }
     }));
@@ -945,7 +945,7 @@ async function loadCouplePlans() {
         const dueIds = planData.capsules.filter(item => item.open_on <= todayISO()).map(item => item.id);
         if (dueIds.length) {
             const { data: contents, error } = await supabaseClient.from("love_capsule_contents").select("capsule_id, message").in("capsule_id", dueIds);
-            if (error) console.warn("O Supabase não liberou o conteúdo das cápsulas.", error);
+            if (error) console.warn("Princesa, O sistema não liberou o conteúdo das cápsulas.", error);
             else {
                 const messageById = new Map((contents || []).map(item => [String(item.capsule_id), item.message]));
                 planData.capsules.forEach(item => { item.message = messageById.get(String(item.id)) || ""; });
@@ -970,19 +970,19 @@ document.getElementById("letterForm").addEventListener("submit", async event => 
     if (editingLetterId) {
         if (!galleryAdminIsAllowed) return;
         const { data, error } = await supabaseClient.from("love_letters").update(letter).eq("id", editingLetterId).select("*").single();
-        if (error) { status.textContent = "Não foi possível salvar. Esta cartinha pode estar marcada como não editável."; return; }
+        if (error) { status.textContent = "Princesa, Não deu pra salvar. Esta cartinha pode estar marcada como não editável."; return; }
         planData.letters = planData.letters.map(item => String(item.id) === String(editingLetterId) ? data : item);
-        status.textContent = "Cartinha atualizada.";
+        status.textContent = "Princesa, Cartinha atualizada.";
     } else {
         const id = crypto.randomUUID();
         const fullLetter = { id, ...letter, created_at: new Date().toISOString() };
         if (supabaseClient) {
             const { data, error } = await supabaseClient.from("love_letters").insert(fullLetter).select("*").single();
-            if (error) { status.textContent = "Não foi possível guardar a cartinha. Confira a conexão e o SQL do Supabase."; return; }
+            if (error) { status.textContent = "Princesa, Não foi possível guardar a cartinha. Avisa o Samuel que o sistema caiu."; return; }
             planData.letters.push(data);
-            status.textContent = "Cartinha guardada para vocês 💌";
+            status.textContent = "Princesa, Cartinha guardada pra gente 💌";
         } else {
-            planData.letters.push(fullLetter); status.textContent = "Cartinha guardada neste navegador.";
+            planData.letters.push(fullLetter); status.textContent = "Princesa, Cartinha guardada neste navegador.";
         }
     }
     savePlanLocally("letters"); renderLetters();
@@ -1026,14 +1026,14 @@ document.getElementById("capsuleForm").addEventListener("submit", async event =>
     if (!title || !message) return;
     const metadata = { id: crypto.randomUUID(), title, open_on: openOn, author: document.getElementById("capsuleAuthor").value, created_at: new Date().toISOString() };
     const { error: metadataError } = await supabaseClient.from("love_capsules").insert(metadata);
-    if (metadataError) { status.textContent = "Não foi possível criar a cápsula. Confira o SQL do Supabase."; return; }
+    if (metadataError) { status.textContent = "Princesa, Não foi possível criar a cápsula. Avisa o Samuel que o sistema caiu."; return; }
     const { error: contentError } = await supabaseClient.from("love_capsule_contents").insert({ capsule_id: metadata.id, message });
     if (contentError) {
         await supabaseClient.from("love_capsules").delete().eq("id", metadata.id);
-        status.textContent = "Não foi possível selar o texto. Confira as políticas de cápsula no Supabase."; return;
+        status.textContent = "Princesa, Não foi possível selar o texto. Avisa o Samuel que o sistema caiu."; return;
     }
     planData.capsules.push(metadata); renderCapsules();
-    document.getElementById("capsuleForm").reset(); status.textContent = "Cápsula selada. O texto ficará protegido até a data escolhida. 🔒";
+    document.getElementById("capsuleForm").reset(); status.textContent = "Cápsula selada. O texto ficará protegido até a data escolhida fofa. 🔒";
 });
 
 document.getElementById("goToAdminLogin").addEventListener("click", () => {
@@ -1061,17 +1061,17 @@ document.getElementById("placeForm").addEventListener("submit", async event => {
     const placeName = document.getElementById("placeName").value.trim();
     if (!placeName) { status.textContent = "Dê um nome para este lugar."; return; }
     if (photoFile && (!photoFile.type.startsWith("image/") || photoFile.size > 25 * 1024 * 1024)) {
-        status.textContent = "Escolha uma foto de até 25 MB."; return;
+        status.textContent = "Princesa, escolha uma foto de até 25 MB."; return;
     }
     let photoUrl = null;
     let photoPath = null;
     if (photoFile) {
-        if (!supabaseClient) { status.textContent = "Para guardar a foto e vê-la em outros aparelhos, configure o Supabase primeiro."; return; }
+        if (!supabaseClient) { status.textContent = "Princesa, Para guardar a foto e ver em outros lugars, configure o Supabase primeiro."; return; }
         status.textContent = "Enviando foto…";
         const safeName = photoFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         photoPath = `places/${crypto.randomUUID()}-${safeName}`;
         const { error: photoError } = await supabaseClient.storage.from("memories").upload(photoPath, photoFile, { contentType: photoFile.type, upsert: false });
-        if (photoError) { console.error("Não foi possível enviar a foto do lugar.", photoError); status.textContent = "Não foi possível enviar a foto. Confira as permissões do Storage no Supabase."; return; }
+        if (photoError) { console.error("Não foi possível enviar a foto do lugar.", photoError); status.textContent = "Princesa, Não foi possível enviar a foto. Talvez seja pesado, ou o tipo do arquivo."; return; }
         photoUrl = supabaseClient.storage.from("memories").getPublicUrl(photoPath).data.publicUrl;
     } else if (editingPlaceId) {
         const existingPlace = planData.places.find(item => String(item.id) === String(editingPlaceId));
@@ -1089,7 +1089,7 @@ document.getElementById("placeForm").addEventListener("submit", async event => {
     if (editingPlaceId) {
         if (supabaseClient) {
             const { data, error } = await supabaseClient.from("love_places").update(place).eq("id", editingPlaceId).select("*").single();
-            if (error) { status.textContent = "Não foi possível atualizar este lugar. Confira a conexão e o SQL do Supabase."; return; }
+            if (error) { status.textContent = "Baby, Não foi possível atualizar este lugar. Avisa o Samuel que o sistema caiu."; return; }
             planData.places = planData.places.map(item => String(item.id) === String(editingPlaceId) ? data : item);
             synced = true;
         } else {
@@ -1110,7 +1110,7 @@ document.getElementById("placeForm").addEventListener("submit", async event => {
     document.getElementById("placeCoordinates").textContent = "Ponto inicial selecionado em Taubaté, São Paulo. Você pode mudar o ponto tocando no globo.";
     if (selectedPointMarker) selectedPointMarker.remove(); selectedPointMarker = null;
     lovePlacesMap?.flyTo({ center: [taubateStartingPoint.longitude, taubateStartingPoint.latitude], zoom: 3.5 });
-    status.textContent = synced ? (wasEditing ? "Lugar atualizado para vocês dois!" : "Lugar e foto guardados para vocês dois!") : (wasEditing ? "Lugar atualizado neste navegador." : "Lugar guardado neste navegador. Configure o SQL do Supabase para sincronizar entre aparelhos.");
+    status.textContent = synced ? (wasEditing ? "Lugar atualizado pra nós dois" : "Lugar e foto guardados pra nós dois") : (wasEditing ? "Lugar atualizado neste navegador." : "Lugar guardado neste navegador. Configure o SQL do Supabase para enviar na nuvem, avisa pro Samuel que o sistema ta ruim.");
 });
 
 document.getElementById("cancelPlaceEdit").addEventListener("click", cancelPlaceEdit);
@@ -1122,7 +1122,7 @@ document.getElementById("checklistForm").addEventListener("submit", async event 
     const synced = await persistPlanItem("checklist", { id: crypto.randomUUID(), text, done: false, created_at: new Date().toISOString() });
     input.value = "";
     input.setAttribute("aria-describedby", "checklistProgress");
-    if (!synced && supabaseClient) document.getElementById("checklistProgress").textContent += " · salvo neste navegador; SQL do Supabase pendente";
+    if (!synced && supabaseClient) document.getElementById("checklistProgress").textContent += " · salvo neste navegador bb; SQL do Supabase pendente ainda";
 });
 
 renderCouplePlans();
@@ -1219,7 +1219,7 @@ function formatTimelineDate(value) {
 
 function persistTimelineLocally() {
     try { localStorage.setItem(timelineStorageKey, JSON.stringify(timelineChapters)); }
-    catch (error) { console.warn("Não foi possível guardar a timeline neste aparelho.", error); }
+    catch (error) { console.warn("Não foi possível guardar a timeline nesse celular podre.", error); }
 }
 
 function renderTimeline() {
@@ -1292,7 +1292,7 @@ function timelineRow(chapter, position) {
 async function syncTimelineChapter(chapter, position) {
     if (!supabaseClient) return false;
     const { error } = await supabaseClient.from("love_timeline").upsert(timelineRow(chapter, position));
-    if (error) { console.warn("A timeline ficou salva neste aparelho, mas não sincronizou. Execute o SQL atualizado do Supabase.", error); return false; }
+    if (error) { console.warn("A timeline ficou salva neste aparelho, mas não sincronizou. Execute o SQL atualizado do Supabase samuca.", error); return false; }
     return true;
 }
 
@@ -1339,7 +1339,7 @@ document.getElementById("cancelTimelineEdit").addEventListener("click", () => { 
 document.getElementById("deleteTimelineChapter").addEventListener("click", async () => {
     const chapterId = editingTimelineChapterId;
     const chapter = timelineChapters.find(item => item.id === chapterId);
-    if (!chapter || !window.confirm(`Apagar o capítulo “${chapter.title}”? Essa ação não pode ser desfeita.`)) return;
+    if (!chapter || !window.confirm(`Apagar o capítulo “${chapter.title}”? Essa ação não pode ser desfeita, ja era.`)) return;
     const status = document.getElementById("timelineEditorStatus");
     const button = document.getElementById("deleteTimelineChapter");
     button.disabled = true;
@@ -1347,7 +1347,7 @@ document.getElementById("deleteTimelineChapter").addEventListener("click", async
     if (supabaseClient) {
         const { error } = await supabaseClient.from("love_timeline").delete().eq("id", chapterId);
         if (error) {
-            status.textContent = "Não foi possível apagar o capítulo sincronizado. Tente novamente.";
+            status.textContent = "Não foi possível apagar o capítulo sincronizado, chama o Samuel ou Tente novamente.";
             button.disabled = false;
             return;
         }
@@ -1357,7 +1357,7 @@ document.getElementById("deleteTimelineChapter").addEventListener("click", async
     renderTimeline();
     timelineChapterForm.hidden = true;
     editingTimelineChapterId = null;
-    document.getElementById("timelineSaveStatus").textContent = supabaseClient ? "Capítulo apagado da timeline." : "Capítulo apagado deste aparelho.";
+    document.getElementById("timelineSaveStatus").textContent = supabaseClient ? "Capítulo apagado da timeline." : "Capítulo apagado deste celular podre.";
     if (supabaseClient) await syncAllTimelineChapters();
 });
 timelineTrack.addEventListener("click", event => {
@@ -1388,9 +1388,9 @@ timelineChapterForm.addEventListener("submit", async event => {
     persistTimelineLocally();
     renderTimeline();
     timelineChapterForm.hidden = true;
-    document.getElementById("timelineSaveStatus").textContent = "Capítulo salvo neste aparelho…";
+    document.getElementById("timelineSaveStatus").textContent = "Capítulo salvo nesse celular podre…";
     const synced = await syncAllTimelineChapters();
-    document.getElementById("timelineSaveStatus").textContent = synced ? "Capítulo salvo e sincronizado para vocês dois!" : "Capítulo salvo neste aparelho. Para sincronizar, execute o SQL atualizado do Supabase.";
+    document.getElementById("timelineSaveStatus").textContent = synced ? "Capítulo salvo e sincronizado pra nós dois" : "Capítulo salvo nesse celular veio. Para sincronizar, Chama o samuca e atualiza o SQL do Supabase.";
 });
 
 function populateTimelinePhotoChoices() {
@@ -1400,7 +1400,7 @@ function populateTimelinePhotoChoices() {
     if (!images.length) {
         const empty = document.createElement("p");
         empty.className = "timeline-photo-empty";
-        empty.textContent = "Ainda não há fotos carregadas em Our Photos. Aguarde a galeria carregar e tente novamente.";
+        empty.textContent = "Ainda não tem fotos carregados em Our Photos. Espera ai tio, ta carregar e tente novamente.";
         timelinePhotoChoices.append(empty);
         return;
     }
@@ -1488,7 +1488,7 @@ async function saveDateIdeas() {
     const syncRequest = dateIdeasSyncQueue.then(async () => {
         const { error } = await supabaseClient.from("love_date_ideas").upsert({ id: 1, ideas: ideasSnapshot, updated_at: new Date().toISOString() }, { onConflict: "id" });
         if (error) {
-            console.warn("As ideias da roleta ficaram salvas neste aparelho, mas não sincronizaram.", error);
+            console.warn("As ideias da roleta ficaram salvas neste Celular podre, mas não sincronizaram.", error);
             return false;
         }
         return true;
@@ -1500,18 +1500,18 @@ async function loadDateIdeasFromCloud() {
     if (!supabaseClient) return;
     const { data, error } = await supabaseClient.from("love_date_ideas").select("ideas").eq("id", 1).maybeSingle();
     if (error) {
-        console.warn("Não foi possível carregar as ideias da roleta na nuvem. Confira a tabela love_date_ideas no Supabase.", error);
-        document.getElementById("dateIdeaStatus").textContent = "Ideias neste aparelho. Execute o SQL atualizado para sincronizar na nuvem.";
+        console.warn("Não foi possível carregar as ideias da roleta na nuvem bb. Chama o Samuel.", error);
+        document.getElementById("dateIdeaStatus").textContent = "Não consegui sincronizar as ideias agora. Elas continuam salvas neste Celular podre.";
         return;
     }
     if (data && Array.isArray(data.ideas)) {
         dateIdeas = data.ideas.filter(idea => typeof idea === "string" && idea.trim()).slice(0, 12);
         try { localStorage.setItem(dateIdeasStorageKey, JSON.stringify(dateIdeas)); } catch (_) {}
         renderDateIdeas();
-        document.getElementById("dateIdeaStatus").textContent = "Ideias carregadas da nuvem.";
+        document.getElementById("dateIdeaStatus").textContent = "";
     } else {
         const synced = await saveDateIdeas();
-        document.getElementById("dateIdeaStatus").textContent = synced ? "Suas ideias foram salvas na nuvem." : "Ideias neste aparelho. A nuvem não sincronizou.";
+        document.getElementById("dateIdeaStatus").textContent = synced ? "Suas ideias foram salvas na nuvem." : "Ideias neste Celular podre. A nuvem não sincronizou.";
     }
 }
 function cancelDateIdeaEdit() {
@@ -1548,8 +1548,8 @@ document.getElementById("dateIdeaForm").addEventListener("submit", async event =
     const value = document.getElementById("dateIdeaInput").value.trim();
     const status = document.getElementById("dateIdeaStatus");
     if (!value) return;
-    if (editingDateIdeaIndex === null && dateIdeas.length >= 12) {
-        status.textContent = "A roleta aceita até 12 ideias para manter as fatias fáceis de ler.";
+    if (editingDateIdeaIndex === null && dateIdeas.length >= 15) {
+        status.textContent = "A roleta aceita até 15 ideias bb, desculpa.";
         return;
     }
     if (editingDateIdeaIndex === null) dateIdeas.push(value);
@@ -1557,7 +1557,7 @@ document.getElementById("dateIdeaForm").addEventListener("submit", async event =
     cancelDateIdeaEdit();
     renderDateIdeas();
     const synced = await saveDateIdeas();
-    status.textContent = synced ? "Ideia salva e sincronizada na nuvem!" : "Ideia salva neste aparelho; a nuvem não sincronizou.";
+    status.textContent = synced ? "Ideia salva e sincronizada na nuvem princesa" : "Ideia salva neste Celular podre; a nuvem não sincronizou.";
 });
 document.getElementById("cancelDateIdeaEdit").addEventListener("click", cancelDateIdeaEdit);
 renderDateIdeas();
@@ -1565,7 +1565,7 @@ document.getElementById("spinDateRoulette").addEventListener("click", event => {
     const button = event.currentTarget;
     if (button.disabled) return;
     if (!dateIdeas.length) {
-        document.getElementById("dateRouletteResult").textContent = "Adicione uma ideia para girar a roleta.";
+        document.getElementById("dateRouletteResult").textContent = "Coloca alguma coisa ai ne bb, para girar a roleta.";
         return;
     }
     button.disabled = true;
@@ -1591,6 +1591,12 @@ document.getElementById("spinDateRoulette").addEventListener("click", event => {
 });
 
 let activeGalleryFilter = "all";
+let gallerySortOrder = "newest";
+
+document.getElementById("gallerySortOrder").addEventListener("change", event => {
+    gallerySortOrder = event.target.value;
+    renderGalleryPage(1);
+});
 
 document.querySelectorAll(".gallery-item").forEach(item => {
     item.dataset.category = "us";
@@ -1618,9 +1624,10 @@ function renderGalleryPage(page = 1) {
         if (activeGalleryFilter === "videos") return item.dataset.type === "video" || item.dataset.category === "videos";
         return item.dataset.category === activeGalleryFilter;
     });
-    const pageCount = Math.max(1, Math.ceil(matchingItems.length / GALLERY_PAGE_SIZE));
+    const orderedItems = sortGalleryItems(matchingItems);
+    const pageCount = Math.max(1, Math.ceil(orderedItems.length / GALLERY_PAGE_SIZE));
     const currentPage = Math.min(Math.max(page, 1), pageCount);
-    const pageItems = new Set(matchingItems.slice((currentPage - 1) * GALLERY_PAGE_SIZE, currentPage * GALLERY_PAGE_SIZE));
+    const pageItems = new Set(orderedItems.slice((currentPage - 1) * GALLERY_PAGE_SIZE, currentPage * GALLERY_PAGE_SIZE));
     items.forEach(item => {
         item.hidden = !pageItems.has(item);
     });
@@ -1638,6 +1645,16 @@ function renderGalleryPage(page = 1) {
     }
 }
 
+function sortGalleryItems(items) {
+    return items.map((item, index) => ({ item, index, date: Date.parse(item.dataset.createdAt || "") || null }))
+        .sort((a, b) => {
+            if (a.date && b.date && a.date !== b.date) return gallerySortOrder === "newest" ? b.date - a.date : a.date - b.date;
+            if (a.date && !b.date) return -1;
+            if (!a.date && b.date) return 1;
+            return gallerySortOrder === "newest" ? a.index - b.index : b.index - a.index;
+        }).map(entry => entry.item);
+}
+
 function addGalleryItem(memory) {
     const item = document.createElement("div");
     item.className = "gallery-item";
@@ -1645,19 +1662,20 @@ function addGalleryItem(memory) {
     if (memory.id) item.dataset.memoryId = memory.id;
     item.dataset.category = memory.category || "us";
     item.dataset.type = memory.type || "image";
+    if (memory.createdAt) item.dataset.createdAt = memory.createdAt;
     if (memory.type === "video") {
         const video = document.createElement("video");
         video.src = memory.image;
         video.muted = true;
         video.preload = "metadata";
         video.playsInline = true;
-        video.addEventListener("click", () => openMedia(memory.image, memory.title || "Vídeo da galeria", "video"));
+        video.addEventListener("click", () => openGalleryItem(item));
         item.appendChild(video);
     } else {
         const image = document.createElement("img");
         image.src = memory.image;
         image.alt = memory.title || "Foto da galeria";
-        image.addEventListener("click", () => openMedia(memory.image, memory.title || "Foto da galeria", "image"));
+        image.addEventListener("click", () => openGalleryItem(item));
         item.appendChild(image);
     }
     if (memory.id) {
@@ -1679,7 +1697,7 @@ function updateGalleryAdminUI() {
     const loginPanel = document.getElementById("galleryAdminLogin");
     const logoutButton = document.getElementById("galleryAdminLogout");
     if (!supabaseClient) {
-        message.textContent = "O Supabase não está disponível.";
+        message.textContent = "O Supabase não está disponível, desiste.";
         loginPanel.hidden = true;
         logoutButton.hidden = true;
         return;
@@ -1689,9 +1707,9 @@ function updateGalleryAdminUI() {
     if (galleryAdminIsAllowed) {
         message.textContent = `Modo de administração ativo para ${galleryAdminUser.email}.`;
     } else if (galleryAdminUser) {
-        message.textContent = "Esta conta não tem permissão administrativa para gerenciar fotos ou notícias.";
+        message.textContent = "Esta conta não tem permissão pra nada, recomendo sair, ladrãozinho. ou vc errou msm.";
     } else {
-        message.textContent = "Entre como administrador para editar ou apagar fotos e notícias.";
+        message.textContent = "Entre como ADM pra editar ou apagar fotos e notícias de tudo.";
     }
     document.querySelectorAll(".gallery-delete-button").forEach(button => {
         button.hidden = !galleryAdminIsAllowed;
@@ -1703,7 +1721,7 @@ async function refreshGalleryAdminPermission() {
     if (supabaseClient && galleryAdminUser) {
         const { data, error } = await supabaseClient.rpc("is_gallery_admin");
         if (!error) galleryAdminIsAllowed = data === true;
-        else console.error("Não foi possível verificar a permissão administrativa.", error);
+        else console.error("Não foi possível ver a permissão administrativa, Chama o Samuel.", error);
     }
     if (!galleryAdminIsAllowed) planData.capsules.forEach(capsule => { delete capsule.message; });
     updateGalleryAdminUI();
@@ -1716,12 +1734,12 @@ async function loginGalleryAdmin() {
     const password = document.getElementById("galleryAdminPassword").value;
     const status = document.getElementById("galleryAdminStatus");
     if (!supabaseClient || !email || !password) {
-        status.textContent = "Digite o e-mail e a senha da conta administradora.";
+        status.textContent = "Digite o e-mail e a senha da conta ADM.";
         return;
     }
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) {
-        status.textContent = "Não foi possível entrar. Confira as credenciais.";
+        status.textContent = "Não foi possível entrar irmão. Confira as credenciais ai.";
         return;
     }
     galleryAdminUser = data.user;
@@ -1731,16 +1749,16 @@ async function loginGalleryAdmin() {
         await supabaseClient.auth.signOut();
         galleryAdminUser = null;
         updateGalleryAdminUI();
-        status.textContent = "Este e-mail não está autorizado a apagar fotos.";
+        status.textContent = "Este e-mail não está autorizado a apagar fotos. Sai agora, ladrãozinho.";
         return;
     }
-    status.textContent = "Admin conectado. Os botões de exclusão estão disponíveis.";
+    status.textContent = "Bem vindo de volta ADMS. Os botões de exclusão estão disponíveis pra vcs.";
 }
 
 async function logoutGalleryAdmin() {
     const { error } = await supabaseClient.auth.signOut();
     if (error) {
-        document.getElementById("galleryAdminStatus").textContent = "Não foi possível sair da conta.";
+        document.getElementById("galleryAdminStatus").textContent = "Não foi possível sair da conta. bugou";
         return;
     }
     galleryAdminUser = null;
@@ -1764,12 +1782,12 @@ async function deleteGalleryMemory(memoryId) {
         .remove([memory.filePath]);
     if (storageError) {
         console.error(storageError);
-        status.textContent = "O Supabase recusou apagar o arquivo. Confira a policy de DELETE em storage.objects e execute o SQL atualizado.";
+        status.textContent = "O sistema recusou apagar o arquivo. Chama o Samuel agora, se não vai explodir.";
         return;
     }
     if (!removedFiles?.some(file => file.name === memory.filePath)) {
         console.error("Supabase não retornou o arquivo removido.", { filePath: memory.filePath, removedFiles });
-        status.textContent = "O Supabase não confirmou a exclusão. Execute novamente o supabase-setup.sql atualizado (ele libera SELECT e DELETE para o administrador) e tente de novo.";
+        status.textContent = "O Sistema não confirmou a exclusão. Execute novamente o supabase-setup.sql atualizado (ele libera SELECT e DELETE para o administrador) ou, Chama o Samuel ai";
         return;
     }
     const { data: deletedRows, error: rowError } = await supabaseClient
@@ -1779,11 +1797,11 @@ async function deleteGalleryMemory(memoryId) {
         .select("id");
     if (rowError) {
         console.error(rowError);
-        status.textContent = "O arquivo foi apagado, mas não foi possível remover o registro da galeria.";
+        status.textContent = "O arquivo foi apagado, mas não foi possível remover o registro da galeria bb, desculpa.";
         return;
     }
     if (!deletedRows?.length) {
-        status.textContent = "O arquivo foi apagado, mas o Supabase não removeu o registro. Confira a policy de DELETE em memories.";
+        status.textContent = "O arquivo foi apagado bb, mas o Supabase não removeu o registro. Confira a policy de DELETE em memories.";
         return;
     }
 
@@ -1830,7 +1848,7 @@ async function loadSavedMemories() {
         renderGalleryPage(1);
     } catch (error) {
         console.error("Não foi possível carregar as lembranças do Supabase.", error);
-        document.getElementById("uploadStatus").textContent = "Não foi possível carregar as lembranças. Confira a configuração do Supabase.";
+        document.getElementById("uploadStatus").textContent = "Não foi possível carregar as nossas lembranças princesa. Confira a configuração do Supabase.";
     }
 }
 
@@ -1841,7 +1859,7 @@ async function initializeSupabase() {
         return;
     }
     const { data, error } = await supabaseClient.auth.getSession();
-    if (error) console.error("Não foi possível recuperar a sessão do administrador.", error);
+    if (error) console.error("Não foi possível recuperar a sessão do ADM.", error);
     galleryAdminUser = data?.session?.user || null;
     await refreshGalleryAdminPermission();
     await loadDateIdeasFromCloud();
@@ -1850,8 +1868,8 @@ async function initializeSupabase() {
     try {
         await loadSavedNews();
     } catch (newsError) {
-        console.error("Não foi possível carregar as notícias salvas.", newsError);
-        document.getElementById("newsStatus").textContent = "Não foi possível carregar as notícias salvas. Execute o SQL atualizado do Supabase.";
+        console.error("Não foi possível carregar as notícias salvas princesa.", newsError);
+        document.getElementById("newsStatus").textContent = "Não foi possível carregar as notícias salvas princesa. Execute o SQL atualizado do Supabase.";
     }
     await loadCouplePlans();
     supabaseClient.auth.onAuthStateChange((_event, session) => {
@@ -1872,26 +1890,26 @@ async function addMemoryUpload() {
     const status = document.getElementById("uploadStatus");
     const file = fileInput.files[0];
     if (!supabaseClient) {
-        status.textContent = "O armazenamento não está disponível. Tente novamente mais tarde.";
+        status.textContent = "O armazenamento não está disponível, Provavelmente acabou tudo, Chama o Samuel.";
         return;
     }
     const title = titleInput.value.trim();
     const subtitle = subtitleInput.value.trim();
     if (!file) {
-        status.textContent = "Escolha uma foto ou vídeo para enviar.";
+        status.textContent = "Escolha uma foto ou vídeo para enviar bb.";
         return;
     }
     if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-        status.textContent = "Escolha um arquivo de imagem ou vídeo válido.";
+        status.textContent = "Escolha um arquivo de imagem ou vídeo válido, logico.";
         return;
     }
     if (file.size > 100 * 1024 * 1024) {
-        status.textContent = "O arquivo precisa ter até 100 MB.";
+        status.textContent = "O arquivo precisa ter até 100 MB, não esquece.";
         return;
     }
     const mediaType = file.type.startsWith("video/") ? "video" : "image";
     const filePath = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    status.textContent = "Enviando arquivo para o Supabase…";
+    status.textContent = "Enviando arquivo para nuvem…";
     try {
         const { error: storageError } = await supabaseClient.storage
             .from("memories")
@@ -1941,11 +1959,11 @@ async function addMemoryUpload() {
         subtitleInput.value = "";
         categoryInput.value = "us";
         status.textContent = subtitle
-            ? "Foto enviada para Our Photos e adicionada ao carrossel de lembranças!"
-            : "Foto enviada para Our Photos. Sem legenda, ela não entrou no carrossel.";
+            ? "Foto enviada para a galeria e adicionada ao carrosselzao de lembranças"
+            : "Foto enviada para a galeria. Só galeria bb, ela ficou fora do carrossel.";
     } catch (error) {
-        console.error("Falha ao enviar mídia ao Supabase.", error);
-        status.textContent = "Não foi possível enviar. Verifique sua conexão e as políticas configuradas no Supabase.";
+        console.error("Falha ao enviar mídia na nuvem (-_-)", error);
+        status.textContent = "Não foi possível enviar bb. Verifique sua conexão e as políticas configuradas no Supabase.";
     }
 }
 
@@ -2125,7 +2143,7 @@ async function addNews() {
         return;
     }
     if (!supabaseClient) {
-        status.textContent = "O Supabase não está disponível. Confira a configuração do site.";
+        status.textContent = "O Supabase não está disponível (-_-). Confira a configuração do site.";
         return;
     }
 
@@ -2151,7 +2169,7 @@ async function addNews() {
         status.textContent = wasEditing ? "Notícia atualizada e salva." : "Notícia publicada e salva para todos.";
     } catch (error) {
         console.error("Não foi possível salvar a notícia.", error);
-        status.textContent = "Não foi possível salvar. Confira sua conexão e execute o SQL atualizado do Supabase.";
+        status.textContent = "Não foi possível salvar, deve ser a conexão bb. Confira sua conexão e execute o SQL atualizado do Supabase.";
     } finally {
         saveButton.disabled = false;
     }
@@ -2209,7 +2227,7 @@ async function deleteNews(newsId) {
         .delete().eq("id", newsId).select("id");
     if (error || !data?.length) {
         console.error("Não foi possível apagar a notícia.", error);
-        status.textContent = "Não foi possível apagar. Entre como administrador e confira se o SQL atualizado foi executado.";
+        status.textContent = "Não foi possível apagar. Entra como ADM e confira se o SQL atualizado foi executado.";
         return;
     }
     news = news.filter(entry => entry.id !== newsId);
@@ -2226,6 +2244,40 @@ async function deleteNews(newsId) {
 function openImage(image) {
     openMedia(image.src, image.alt, "image");
 }
+
+let galleryModalItems = [];
+let galleryModalIndex = -1;
+
+function openGalleryItem(item) {
+    const items = Array.from(document.querySelector(".gallery").children).filter(candidate => {
+        if (activeGalleryFilter === "all") return true;
+        if (activeGalleryFilter === "videos") return candidate.dataset.type === "video" || candidate.dataset.category === "videos";
+        return candidate.dataset.category === activeGalleryFilter;
+    });
+    galleryModalItems = sortGalleryItems(items);
+    galleryModalIndex = galleryModalItems.indexOf(item);
+    displayGalleryModalItem();
+}
+
+function displayGalleryModalItem() {
+    const item = galleryModalItems[galleryModalIndex];
+    if (!item) return;
+    const media = item.querySelector("img, video");
+    if (!media) return;
+    openMedia(media.currentSrc || media.src, media.alt || "Vídeo da galeria", media.tagName.toLowerCase() === "video" ? "video" : "image");
+    const hasNavigation = galleryModalItems.length > 1;
+    document.querySelectorAll(".modal-gallery-nav").forEach(button => { button.hidden = !hasNavigation; });
+    document.getElementById("modalGalleryPosition").textContent = hasNavigation ? `${galleryModalIndex + 1} de ${galleryModalItems.length}` : "";
+}
+
+function stepGalleryModal(direction) {
+    if (galleryModalItems.length < 2) return;
+    galleryModalIndex = (galleryModalIndex + direction + galleryModalItems.length) % galleryModalItems.length;
+    displayGalleryModalItem();
+}
+
+document.querySelector(".modal-gallery-previous").addEventListener("click", () => stepGalleryModal(-1));
+document.querySelector(".modal-gallery-next").addEventListener("click", () => stepGalleryModal(1));
 
 function openMedia(source, title, type) {
     const modal = document.getElementById("imageModal");
@@ -2256,6 +2308,10 @@ function closeImage() {
     video.removeAttribute("src");
     video.load();
     modal.classList.remove("show");
+    galleryModalItems = [];
+    galleryModalIndex = -1;
+    document.querySelectorAll(".modal-gallery-nav").forEach(button => { button.hidden = true; });
+    document.getElementById("modalGalleryPosition").textContent = "";
 }
 
 
@@ -2284,6 +2340,11 @@ document
 document.addEventListener(
     "keydown",
     function(event) {
+
+        if (document.getElementById("imageModal").classList.contains("show")) {
+            if (event.key === "ArrowLeft") stepGalleryModal(-1);
+            if (event.key === "ArrowRight") stepGalleryModal(1);
+        }
 
         if (event.key === "Escape") {
 
