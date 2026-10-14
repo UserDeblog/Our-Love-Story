@@ -127,11 +127,31 @@ create table if not exists public.love_checklist (
     created_at timestamptz not null default now()
 );
 
+create table if not exists public.love_timeline (
+    id text primary key,
+    event_date date not null,
+    title text not null check (pg_catalog.length(pg_catalog.btrim(title)) > 0),
+    comment text not null default '',
+    image_url text,
+    position integer not null default 0,
+    is_future boolean not null default false,
+    created_at timestamptz not null default now()
+);
+
+-- Shared activity ideas used by the date roulette.
+create table if not exists public.love_date_ideas (
+    id smallint primary key default 1 check (id = 1),
+    ideas jsonb not null default '[]'::jsonb check (jsonb_typeof(ideas) = 'array'),
+    updated_at timestamptz not null default now()
+);
+
 alter table public.love_letters enable row level security;
 alter table public.love_places enable row level security;
 alter table public.love_checklist enable row level security;
-revoke all on public.love_letters, public.love_places, public.love_checklist from anon, authenticated;
-grant select, insert, update, delete on public.love_letters, public.love_places, public.love_checklist to anon, authenticated;
+alter table public.love_timeline enable row level security;
+alter table public.love_date_ideas enable row level security;
+revoke all on public.love_letters, public.love_places, public.love_checklist, public.love_timeline, public.love_date_ideas from anon, authenticated;
+grant select, insert, update, delete on public.love_letters, public.love_places, public.love_checklist, public.love_timeline, public.love_date_ideas to anon, authenticated;
 
 drop policy if exists "Public visitors can manage couple letters" on public.love_letters;
 drop policy if exists "Public visitors can read couple letters" on public.love_letters;
@@ -152,6 +172,15 @@ create policy "Public visitors can manage couple places" on public.love_places
     for all to anon, authenticated using (true) with check (true);
 drop policy if exists "Public visitors can manage couple checklist" on public.love_checklist;
 create policy "Public visitors can manage couple checklist" on public.love_checklist
+    for all to anon, authenticated using (true) with check (true);
+drop policy if exists "Public visitors can read couple timeline" on public.love_timeline;
+create policy "Public visitors can read couple timeline" on public.love_timeline
+    for select to anon, authenticated using (true);
+drop policy if exists "Public visitors can manage couple timeline" on public.love_timeline;
+create policy "Public visitors can manage couple timeline" on public.love_timeline
+    for all to anon, authenticated using (true) with check (true);
+drop policy if exists "Public visitors can manage date roulette ideas" on public.love_date_ideas;
+create policy "Public visitors can manage date roulette ideas" on public.love_date_ideas
     for all to anon, authenticated using (true) with check (true);
 
 -- Capsule metadata is public; the actual writing lives in a separate table.

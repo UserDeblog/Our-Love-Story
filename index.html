@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css">
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261013-theme-blur">
 </head>
 
 <body class="intro-active">
@@ -45,6 +45,7 @@
     <div class="top-bar">
         <span id="currentDate"></span>
         <span>NEWSPAPER OF OUR LOVE</span>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false" aria-label="Ativar modo escuro"><span aria-hidden="true">☾</span><b>Modo escuro</b></button>
     </div>
 
     <div class="header-main">
@@ -424,11 +425,24 @@
         <div class="timeline-controls" aria-label="Controles da timeline">
             <span>UMA HISTÓRIA EM CAPÍTULOS</span>
             <div>
+                <button id="addTimelineChapter" class="timeline-add-button" type="button">+ Novo capítulo</button>
                 <button type="button" data-timeline-scroll="-1" aria-label="Ver capítulos anteriores">←</button>
                 <button type="button" data-timeline-scroll="1" aria-label="Ver próximos capítulos">→</button>
             </div>
         </div>
-        <div class="timeline">
+        <form id="timelineChapterForm" class="timeline-editor" hidden>
+            <div class="timeline-editor-heading"><div><span class="section-label">NOVO CAPÍTULO</span><h3>Guardar mais uma lembrança</h3></div><button id="cancelTimelineEdit" type="button" aria-label="Fechar formulário">×</button></div>
+            <div class="timeline-editor-fields">
+                <label>Nome do capítulo<input id="timelineTitleInput" maxlength="80" required placeholder="Ex.: Nosso primeiro show"></label>
+                <label>Data<input id="timelineDateInput" type="date" required></label>
+                <label class="timeline-comment-field">Comentário<textarea id="timelineCommentInput" maxlength="500" required placeholder="Conte por que esse momento é especial"></textarea></label>
+            </div>
+            <div class="timeline-photo-row"><button id="chooseTimelinePhoto" type="button" class="place-photo-picker">♡ Escolher foto da galeria</button><span id="timelinePhotoName" class="place-photo-name">Nenhuma foto selecionada</span><img id="timelinePhotoPreview" alt="Prévia da foto escolhida" hidden></div>
+            <input id="timelinePhotoUrl" type="hidden">
+            <div class="timeline-editor-actions"><p id="timelineEditorStatus" role="status" aria-live="polite"></p><div class="timeline-editor-action-buttons"><button id="deleteTimelineChapter" class="timeline-delete-button" type="button" hidden>Apagar capítulo</button><button type="submit">Salvar capítulo</button></div></div>
+        </form>
+        <p id="timelineSaveStatus" class="timeline-save-status" role="status" aria-live="polite"></p>
+        <div class="timeline" id="timelineTrack">
 
 
         <div class="timeline-item">
@@ -587,7 +601,16 @@
         </div>
     </div>
 
+    <section class="date-roulette" aria-labelledby="dateRouletteTitle">
+        <div class="date-roulette-copy"><span class="section-label">A PRÓXIMA MEMÓRIA COMEÇA AQUI</span><h3 id="dateRouletteTitle">Roleta de encontros</h3><p>Sem saber o que fazer? Deixem a sorte escolher um momento para vocês.</p><div id="dateRouletteResult" class="date-roulette-result" aria-live="polite">Girem a roleta para descobrir ✨</div><button id="spinDateRoulette" type="button">Girar a roleta <span>↗</span></button>
+            <div class="date-idea-manager"><h4>Nossas ideias</h4><form id="dateIdeaForm"><input id="dateIdeaInput" maxlength="90" placeholder="Adicionar uma ideia de encontro" required><button id="saveDateIdea" type="submit">Adicionar</button><button id="cancelDateIdeaEdit" type="button" hidden>Cancelar</button></form><p id="dateIdeaStatus" aria-live="polite"></p><ul id="dateIdeaList" aria-label="Ideias salvas para a roleta"></ul></div>
+        </div>
+        <div class="date-wheel-wrap"><div id="dateWheel" class="date-wheel" role="img" aria-label="Roleta com ideias de encontros"><span class="wheel-center">♥</span></div><span class="wheel-pointer" aria-hidden="true">▼</span></div>
+    </section>
+
 </section>
+
+<dialog id="timelinePhotoDialog" class="timeline-photo-dialog" aria-labelledby="timelinePhotoDialogTitle"><div class="timeline-photo-dialog-head"><div><span class="section-label">OUR PHOTOS</span><h2 id="timelinePhotoDialogTitle">Escolha uma lembrança</h2></div><button type="button" id="closeTimelinePhotoDialog" aria-label="Fechar galeria">×</button></div><div id="timelinePhotoChoices" class="timeline-photo-choices"></div></dialog>
 
 
 
@@ -896,7 +919,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
-<script src="script.js"></script>
+<script src="script.js?v=20261013-theme-blur"></script>
 <script type="module">
     try {
         const maplibregl = await import("https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.mjs");

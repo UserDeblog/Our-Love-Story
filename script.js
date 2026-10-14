@@ -63,6 +63,47 @@ function updateLoveCounter() {
 updateLoveCounter();
 window.setInterval(updateLoveCounter, 1000);
 
+const themeToggle = document.getElementById("themeToggle");
+const savedTheme = (() => { try { return localStorage.getItem("loveChronicleTheme"); } catch (_) { return null; } })();
+function setPageTheme(isDark) {
+    document.body.classList.toggle("dark-mode", isDark);
+    themeToggle.setAttribute("aria-pressed", String(isDark));
+    themeToggle.setAttribute("aria-label", isDark ? "Ativar modo claro" : "Ativar modo escuro");
+    themeToggle.querySelector("span").textContent = isDark ? "☀" : "☾";
+    themeToggle.querySelector("b").textContent = isDark ? "Modo claro" : "Modo escuro";
+    try { localStorage.setItem("loveChronicleTheme", isDark ? "dark" : "light"); } catch (_) {}
+}
+setPageTheme(savedTheme === "dark");
+themeToggle.addEventListener("click", () => {
+    const nextIsDark = !document.body.classList.contains("dark-mode");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) { setPageTheme(nextIsDark); return; }
+
+    const bounds = themeToggle.getBoundingClientRect();
+    document.documentElement.style.setProperty("--theme-origin-x", `${bounds.left + bounds.width / 2}px`);
+    document.documentElement.style.setProperty("--theme-origin-y", `${bounds.top + bounds.height / 2}px`);
+    themeToggle.classList.add("is-changing");
+
+    if (typeof document.startViewTransition === "function") {
+        const transition = document.startViewTransition(() => setPageTheme(nextIsDark));
+        const cleanupTransition = () => {
+            themeToggle.classList.remove("is-changing");
+            document.documentElement.style.removeProperty("--theme-origin-x");
+            document.documentElement.style.removeProperty("--theme-origin-y");
+        };
+        transition.finished.then(cleanupTransition, cleanupTransition);
+    } else {
+        document.body.classList.add("theme-is-changing");
+        window.setTimeout(() => setPageTheme(nextIsDark), 280);
+        window.setTimeout(() => {
+            themeToggle.classList.remove("is-changing");
+            document.body.classList.remove("theme-is-changing");
+            document.documentElement.style.removeProperty("--theme-origin-x");
+            document.documentElement.style.removeProperty("--theme-origin-y");
+        }, 800);
+    }
+});
+
 const loveIntro = document.getElementById("loveIntro");
 const enterLoveSiteButton = document.getElementById("enterLoveSite");
 enterLoveSiteButton.focus({ preventScroll: true });
@@ -1127,6 +1168,410 @@ document.querySelectorAll("[data-timeline-scroll]").forEach(button => {
     });
 });
 
+const timelineTrack = document.getElementById("timelineTrack");
+const timelineStorageKey = "loveChronicleTimeline";
+const timelinePhotoDialog = document.getElementById("timelinePhotoDialog");
+const timelinePhotoChoices = document.getElementById("timelinePhotoChoices");
+const timelineChapterForm = document.getElementById("timelineChapterForm");
+let editingTimelineChapterId = null;
+function readInitialTimeline() {
+    return Array.from(timelineTrack.querySelectorAll(".timeline-item")).map((item, index) => ({
+        id: `chapter-${index + 1}`,
+        date: index === 3 ? new Date().toISOString().slice(0, 10) : index < 2 ? "2026-05-01" : "2026-07-01",
+        title: item.querySelector(".timeline-card h3")?.textContent.trim() || `Capítulo ${index + 1}`,
+        comment: item.querySelector(".timeline-card p")?.textContent.trim() || "",
+        image: item.querySelector(".timeline-card img")?.getAttribute("src") || "",
+        isFuture: item.classList.contains("timeline-item") && item.querySelector(".timeline-card.future") !== null
+    }));
+}
+const initialTimelineChapters = readInitialTimeline();
+let timelineChapters = (() => {
+    try {
+        const saved = localStorage.getItem(timelineStorageKey);
+        return saved === null ? initialTimelineChapters : JSON.parse(saved);
+    } catch (_) { return initialTimelineChapters; }
+})();
+
+function formatTimelineDate(value) {
+    if (!value) return "DATA A DEFINIR";
+    const date = new Date(`${value}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(date).toLocaleUpperCase("pt-BR");
+}
+
+function persistTimelineLocally() {
+    try { localStorage.setItem(timelineStorageKey, JSON.stringify(timelineChapters)); }
+    catch (error) { console.warn("Não foi possível guardar a timeline neste aparelho.", error); }
+}
+
+function renderTimeline() {
+    timelineTrack.replaceChildren();
+    timelineChapters.forEach((chapter, index) => {
+        const item = document.createElement("article");
+        item.className = "timeline-item";
+        const date = document.createElement("div");
+        date.className = "timeline-date";
+        date.textContent = formatTimelineDate(chapter.date);
+        const dot = document.createElement("div");
+        dot.className = "timeline-dot";
+        const card = document.createElement("div");
+        card.className = `timeline-card${chapter.isFuture ? " future" : ""}`;
+        if (chapter.image) {
+            const image = document.createElement("img");
+            image.src = chapter.image;
+            image.alt = chapter.title;
+            image.loading = "lazy";
+            card.append(image);
+        } else {
+            const placeholder = document.createElement("div");
+            placeholder.className = "timeline-card-placeholder";
+            placeholder.textContent = chapter.isFuture ? "♥" : "✦";
+            card.append(placeholder);
+        }
+        const content = document.createElement("div");
+        const heading = document.createElement("div");
+        heading.className = "timeline-chapter-heading";
+        const label = document.createElement("span");
+        label.textContent = `CHAPTER ${String(index + 1).padStart(2, "0")}`;
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.className = "timeline-edit-button";
+        edit.dataset.editChapter = chapter.id;
+        edit.setAttribute("aria-label", `Editar capítulo ${chapter.title}`);
+        edit.textContent = "✎";
+        heading.append(label, edit);
+        const title = document.createElement("h3");
+        title.textContent = chapter.title;
+        const comment = document.createElement("p");
+        comment.textContent = chapter.comment;
+        content.append(heading, title, comment);
+        if (chapter.isFuture) {
+            const nextStep = document.createElement("button");
+            nextStep.type = "button";
+            nextStep.className = "timeline-next-step";
+            nextStep.innerHTML = "Escolher nosso próximo capítulo <span>→</span>";
+            nextStep.addEventListener("click", () => openPage("our-plans"));
+            content.append(nextStep);
+        } else {
+            const location = document.createElement("button");
+            location.type = "button";
+            location.className = "timeline-location";
+            location.setAttribute("aria-label", "Abrir nosso mapa");
+            location.innerHTML = '<span class="timeline-globe" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21"/><path d="M4 24h40M24 3c7 6 10 13 10 21S31 39 24 45M24 3c-7 6-10 13-10 21s3 15 10 21M8 12h32M8 36h32"/></svg><i>♥</i></span><span><strong>LOCAL DA LEMBRANÇA</strong><small>Marcar no nosso mapa <b>↗</b></small></span>';
+            location.addEventListener("click", () => openPage("our-plans"));
+            content.append(location);
+        }
+        card.append(content);
+        item.append(date, dot, card);
+        timelineTrack.append(item);
+    });
+}
+
+function timelineRow(chapter, position) {
+    return { id: chapter.id, event_date: chapter.date, title: chapter.title, comment: chapter.comment, image_url: chapter.image || null, position, is_future: Boolean(chapter.isFuture) };
+}
+
+async function syncTimelineChapter(chapter, position) {
+    if (!supabaseClient) return false;
+    const { error } = await supabaseClient.from("love_timeline").upsert(timelineRow(chapter, position));
+    if (error) { console.warn("A timeline ficou salva neste aparelho, mas não sincronizou. Execute o SQL atualizado do Supabase.", error); return false; }
+    return true;
+}
+
+async function syncAllTimelineChapters() {
+    if (!supabaseClient) return false;
+    const results = await Promise.all(timelineChapters.map((chapter, index) => syncTimelineChapter(chapter, index)));
+    return results.every(Boolean);
+}
+
+async function loadTimelineChapters() {
+    if (!supabaseClient) { renderTimeline(); return; }
+    const { data, error } = await supabaseClient.from("love_timeline").select("*").order("position", { ascending: true });
+    if (error) { console.warn("Tabela love_timeline indisponível; usando dados locais.", error); renderTimeline(); return; }
+    if (data?.length) {
+        timelineChapters = data.map(row => ({ id: row.id, date: row.event_date, title: row.title, comment: row.comment, image: row.image_url || "", isFuture: Boolean(row.is_future) }));
+        persistTimelineLocally();
+    } else {
+        await syncAllTimelineChapters();
+    }
+    renderTimeline();
+}
+
+function openTimelineEditor(chapter = null) {
+    editingTimelineChapterId = chapter?.id || null;
+    document.getElementById("timelineTitleInput").value = chapter?.title || "";
+    document.getElementById("timelineDateInput").value = chapter?.date || new Date().toISOString().slice(0, 10);
+    document.getElementById("timelineCommentInput").value = chapter?.comment || "";
+    document.getElementById("timelinePhotoUrl").value = chapter?.image || "";
+    const preview = document.getElementById("timelinePhotoPreview");
+    preview.hidden = !chapter?.image;
+    preview.src = chapter?.image || "";
+    document.getElementById("timelinePhotoName").textContent = chapter?.image ? "Foto selecionada" : "Nenhuma foto selecionada";
+    document.getElementById("timelineEditorStatus").textContent = "";
+    document.querySelector(".timeline-editor-heading .section-label").textContent = chapter ? "EDITAR CAPÍTULO" : "NOVO CAPÍTULO";
+    document.querySelector(".timeline-editor-heading h3").textContent = chapter ? "Atualizar esta lembrança" : "Guardar mais uma lembrança";
+    document.querySelector(".timeline-editor-actions button[type='submit']").textContent = chapter ? "Salvar alterações" : "Salvar capítulo";
+    document.getElementById("deleteTimelineChapter").hidden = !chapter;
+    timelineChapterForm.hidden = false;
+    timelineChapterForm.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+document.getElementById("addTimelineChapter").addEventListener("click", () => openTimelineEditor());
+document.getElementById("cancelTimelineEdit").addEventListener("click", () => { timelineChapterForm.hidden = true; });
+document.getElementById("deleteTimelineChapter").addEventListener("click", async () => {
+    const chapterId = editingTimelineChapterId;
+    const chapter = timelineChapters.find(item => item.id === chapterId);
+    if (!chapter || !window.confirm(`Apagar o capítulo “${chapter.title}”? Essa ação não pode ser desfeita.`)) return;
+    const status = document.getElementById("timelineEditorStatus");
+    const button = document.getElementById("deleteTimelineChapter");
+    button.disabled = true;
+    status.textContent = "Apagando capítulo…";
+    if (supabaseClient) {
+        const { error } = await supabaseClient.from("love_timeline").delete().eq("id", chapterId);
+        if (error) {
+            status.textContent = "Não foi possível apagar o capítulo sincronizado. Tente novamente.";
+            button.disabled = false;
+            return;
+        }
+    }
+    timelineChapters = timelineChapters.filter(item => item.id !== chapterId);
+    persistTimelineLocally();
+    renderTimeline();
+    timelineChapterForm.hidden = true;
+    editingTimelineChapterId = null;
+    document.getElementById("timelineSaveStatus").textContent = supabaseClient ? "Capítulo apagado da timeline." : "Capítulo apagado deste aparelho.";
+    if (supabaseClient) await syncAllTimelineChapters();
+});
+timelineTrack.addEventListener("click", event => {
+    const button = event.target.closest("[data-edit-chapter]");
+    if (!button) return;
+    const chapter = timelineChapters.find(item => item.id === button.dataset.editChapter);
+    if (chapter) openTimelineEditor(chapter);
+});
+
+timelineChapterForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const chapter = {
+        id: editingTimelineChapterId || crypto.randomUUID(),
+        date: document.getElementById("timelineDateInput").value,
+        title: document.getElementById("timelineTitleInput").value.trim(),
+        comment: document.getElementById("timelineCommentInput").value.trim(),
+        image: document.getElementById("timelinePhotoUrl").value,
+        isFuture: false
+    };
+    const existingIndex = timelineChapters.findIndex(item => item.id === chapter.id);
+    if (existingIndex >= 0) chapter.isFuture = Boolean(timelineChapters[existingIndex].isFuture);
+    if (existingIndex >= 0) timelineChapters[existingIndex] = chapter;
+    else {
+        const futureIndex = timelineChapters.findIndex(item => item.isFuture);
+        if (futureIndex >= 0) timelineChapters.splice(futureIndex, 0, chapter);
+        else timelineChapters.push(chapter);
+    }
+    persistTimelineLocally();
+    renderTimeline();
+    timelineChapterForm.hidden = true;
+    document.getElementById("timelineSaveStatus").textContent = "Capítulo salvo neste aparelho…";
+    const synced = await syncAllTimelineChapters();
+    document.getElementById("timelineSaveStatus").textContent = synced ? "Capítulo salvo e sincronizado para vocês dois!" : "Capítulo salvo neste aparelho. Para sincronizar, execute o SQL atualizado do Supabase.";
+});
+
+function populateTimelinePhotoChoices() {
+    timelinePhotoChoices.replaceChildren();
+    const seen = new Set();
+    const images = Array.from(document.querySelectorAll(".gallery-item img"));
+    if (!images.length) {
+        const empty = document.createElement("p");
+        empty.className = "timeline-photo-empty";
+        empty.textContent = "Ainda não há fotos carregadas em Our Photos. Aguarde a galeria carregar e tente novamente.";
+        timelinePhotoChoices.append(empty);
+        return;
+    }
+    images.forEach(image => {
+        const url = image.currentSrc || image.src;
+        if (!url || seen.has(url)) return;
+        seen.add(url);
+        const choice = document.createElement("button");
+        choice.type = "button";
+        choice.className = "timeline-photo-choice";
+        const thumb = document.createElement("img");
+        thumb.src = url;
+        thumb.alt = "";
+        const title = image.alt || image.closest(".gallery-item")?.querySelector(".gallery-caption strong")?.textContent || "Foto da galeria";
+        const label = document.createElement("span");
+        label.textContent = title;
+        choice.append(thumb, label);
+        choice.addEventListener("click", () => {
+            document.getElementById("timelinePhotoUrl").value = url;
+            const preview = document.getElementById("timelinePhotoPreview");
+            preview.src = url;
+            preview.hidden = false;
+            document.getElementById("timelinePhotoName").textContent = title;
+            timelinePhotoDialog.close();
+        });
+        timelinePhotoChoices.append(choice);
+    });
+}
+document.getElementById("chooseTimelinePhoto").addEventListener("click", () => { populateTimelinePhotoChoices(); timelinePhotoDialog.showModal(); });
+document.getElementById("closeTimelinePhotoDialog").addEventListener("click", () => timelinePhotoDialog.close());
+timelinePhotoDialog.addEventListener("click", event => { if (event.target === timelinePhotoDialog) timelinePhotoDialog.close(); });
+renderTimeline();
+
+const defaultDateIdeas = ["Café e conversa sem pressa", "Noite de filme com pipoca", "Piquenique no fim da tarde", "Cozinhar uma receita juntos", "Passeio surpresa", "Jogo de perguntas de casal", "Recriar o primeiro encontro", "Escrever uma cartinha um para o outro"];
+const dateIdeasStorageKey = "loveChronicleDateIdeas";
+let dateIdeas = (() => {
+    try { return JSON.parse(localStorage.getItem(dateIdeasStorageKey) || "null") || defaultDateIdeas.slice(); }
+    catch (_) { return defaultDateIdeas.slice(); }
+})();
+let dateIdeasSyncQueue = Promise.resolve();
+let editingDateIdeaIndex = null;
+let dateWheelRotation = 0;
+const wheelSymbols = ["☕", "🎬", "✦", "♫", "♥", "☀", "✉", "✧", "♡", "☕", "✦", "♥"];
+const wheelColors = ["#f6cfda", "#fff2f5", "#edb8c6", "#fff7f8", "#f2c6d2", "#fff4f6", "#e9b1c0", "#fff9fa"];
+function renderDateIdeas() {
+    const list = document.getElementById("dateIdeaList");
+    list.replaceChildren();
+    dateIdeas.forEach((idea, index) => {
+        const row = document.createElement("li");
+        row.className = "date-idea-item";
+        const label = document.createElement("span");
+        label.textContent = idea;
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.textContent = "Editar";
+        edit.setAttribute("aria-label", `Editar ideia: ${idea}`);
+        edit.addEventListener("click", () => {
+            editingDateIdeaIndex = index;
+            document.getElementById("dateIdeaInput").value = idea;
+            document.getElementById("saveDateIdea").textContent = "Salvar";
+            document.getElementById("cancelDateIdeaEdit").hidden = false;
+            document.getElementById("dateIdeaInput").focus();
+        });
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", `Remover ideia: ${idea}`);
+        remove.addEventListener("click", async () => {
+            dateIdeas.splice(index, 1);
+            if (editingDateIdeaIndex === index) cancelDateIdeaEdit();
+            else if (editingDateIdeaIndex !== null && editingDateIdeaIndex > index) editingDateIdeaIndex--;
+            renderDateIdeas();
+            const synced = await saveDateIdeas();
+            document.getElementById("dateIdeaStatus").textContent = synced ? "Ideia removida e sincronizada na nuvem." : "Ideia removida neste aparelho; a nuvem não sincronizou.";
+        });
+        row.append(label, edit, remove);
+        list.append(row);
+    });
+    renderDateWheel();
+}
+async function saveDateIdeas() {
+    try { localStorage.setItem(dateIdeasStorageKey, JSON.stringify(dateIdeas)); } catch (_) {}
+    if (!supabaseClient) return false;
+    const ideasSnapshot = dateIdeas.slice();
+    const syncRequest = dateIdeasSyncQueue.then(async () => {
+        const { error } = await supabaseClient.from("love_date_ideas").upsert({ id: 1, ideas: ideasSnapshot, updated_at: new Date().toISOString() }, { onConflict: "id" });
+        if (error) {
+            console.warn("As ideias da roleta ficaram salvas neste aparelho, mas não sincronizaram.", error);
+            return false;
+        }
+        return true;
+    });
+    dateIdeasSyncQueue = syncRequest.catch(() => false);
+    return syncRequest;
+}
+async function loadDateIdeasFromCloud() {
+    if (!supabaseClient) return;
+    const { data, error } = await supabaseClient.from("love_date_ideas").select("ideas").eq("id", 1).maybeSingle();
+    if (error) {
+        console.warn("Não foi possível carregar as ideias da roleta na nuvem. Confira a tabela love_date_ideas no Supabase.", error);
+        document.getElementById("dateIdeaStatus").textContent = "Ideias neste aparelho. Execute o SQL atualizado para sincronizar na nuvem.";
+        return;
+    }
+    if (data && Array.isArray(data.ideas)) {
+        dateIdeas = data.ideas.filter(idea => typeof idea === "string" && idea.trim()).slice(0, 12);
+        try { localStorage.setItem(dateIdeasStorageKey, JSON.stringify(dateIdeas)); } catch (_) {}
+        renderDateIdeas();
+        document.getElementById("dateIdeaStatus").textContent = "Ideias carregadas da nuvem.";
+    } else {
+        const synced = await saveDateIdeas();
+        document.getElementById("dateIdeaStatus").textContent = synced ? "Suas ideias foram salvas na nuvem." : "Ideias neste aparelho. A nuvem não sincronizou.";
+    }
+}
+function cancelDateIdeaEdit() {
+    editingDateIdeaIndex = null;
+    document.getElementById("dateIdeaInput").value = "";
+    document.getElementById("saveDateIdea").textContent = "Adicionar";
+    document.getElementById("cancelDateIdeaEdit").hidden = true;
+}
+function renderDateWheel() {
+    const wheel = document.getElementById("dateWheel");
+    const center = wheel.querySelector(".wheel-center");
+    wheel.replaceChildren(center);
+    if (!dateIdeas.length) {
+        wheel.style.background = "conic-gradient(#f6cfda 0deg 360deg)";
+        return;
+    }
+    const slice = 360 / dateIdeas.length;
+    wheel.style.background = `conic-gradient(${dateIdeas.map((_, index) => `${wheelColors[index % wheelColors.length]} ${index * slice}deg ${(index + 1) * slice}deg`).join(",")})`;
+    dateIdeas.forEach((_, index) => {
+        const symbol = document.createElement("span");
+        symbol.className = "wheel-symbol";
+        symbol.style.setProperty("--angle", `${index * slice + slice / 2}deg`);
+        symbol.style.setProperty("--counter-angle", `${-(index * slice + slice / 2)}deg`);
+        symbol.textContent = wheelSymbols[index % wheelSymbols.length];
+        wheel.append(symbol);
+    });
+    dateWheelRotation = 0;
+    wheel.style.transition = "none";
+    wheel.style.transform = "rotate(0deg)";
+    requestAnimationFrame(() => { wheel.style.transition = ""; });
+}
+document.getElementById("dateIdeaForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const value = document.getElementById("dateIdeaInput").value.trim();
+    const status = document.getElementById("dateIdeaStatus");
+    if (!value) return;
+    if (editingDateIdeaIndex === null && dateIdeas.length >= 12) {
+        status.textContent = "A roleta aceita até 12 ideias para manter as fatias fáceis de ler.";
+        return;
+    }
+    if (editingDateIdeaIndex === null) dateIdeas.push(value);
+    else dateIdeas[editingDateIdeaIndex] = value;
+    cancelDateIdeaEdit();
+    renderDateIdeas();
+    const synced = await saveDateIdeas();
+    status.textContent = synced ? "Ideia salva e sincronizada na nuvem!" : "Ideia salva neste aparelho; a nuvem não sincronizou.";
+});
+document.getElementById("cancelDateIdeaEdit").addEventListener("click", cancelDateIdeaEdit);
+renderDateIdeas();
+document.getElementById("spinDateRoulette").addEventListener("click", event => {
+    const button = event.currentTarget;
+    if (button.disabled) return;
+    if (!dateIdeas.length) {
+        document.getElementById("dateRouletteResult").textContent = "Adicione uma ideia para girar a roleta.";
+        return;
+    }
+    button.disabled = true;
+    const roulette = document.querySelector(".date-roulette");
+    const wheel = document.getElementById("dateWheel");
+    const result = document.getElementById("dateRouletteResult");
+    const ideasForThisSpin = dateIdeas.slice();
+    const index = Math.floor(Math.random() * ideasForThisSpin.length);
+    const slice = 360 / ideasForThisSpin.length;
+    const targetAngle = (360 - (index * slice + slice / 2) + 360) % 360;
+    const currentAngle = dateWheelRotation % 360;
+    dateWheelRotation += 360 * (5 + Math.floor(Math.random() * 3)) + ((targetAngle - currentAngle + 360) % 360);
+    roulette.classList.add("is-spinning");
+    roulette.querySelector(".date-idea-manager").setAttribute("inert", "");
+    result.textContent = "A sorte está escolhendo…";
+    wheel.style.transform = `rotate(${dateWheelRotation}deg)`;
+    window.setTimeout(() => {
+        roulette.classList.remove("is-spinning");
+        roulette.querySelector(".date-idea-manager").removeAttribute("inert");
+        result.textContent = `O encontro sorteado: ${ideasForThisSpin[index]} ♥`;
+        button.disabled = false;
+    }, 4550);
+});
+
 let activeGalleryFilter = "all";
 
 document.querySelectorAll(".gallery-item").forEach(item => {
@@ -1407,7 +1852,9 @@ async function initializeSupabase() {
     if (error) console.error("Não foi possível recuperar a sessão do administrador.", error);
     galleryAdminUser = data?.session?.user || null;
     await refreshGalleryAdminPermission();
+    await loadDateIdeasFromCloud();
     await loadSavedMemories();
+    await loadTimelineChapters();
     try {
         await loadSavedNews();
     } catch (newsError) {
